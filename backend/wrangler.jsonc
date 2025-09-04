@@ -9,8 +9,8 @@
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "pkl-database",
-			"database_id": "8bff74e9-ccab-4b7f-8d69-2a9a8339c4f7"
+			"database_name": "woc-database",
+			"database_id": "5b17162d-f806-4108-b1a1-789a070997fb"
 		}
 	]
 }
