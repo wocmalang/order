@@ -45,11 +45,6 @@ export const EditModal = ({
         [editForm?.sektor, getWorkzonesForSektor]
     );
 
-    const korlapOptions = useMemo(
-        () => (editForm?.workzone ? getKorlapsForWorkzone(editForm.workzone) : []),
-        [editForm?.workzone, getKorlapsForWorkzone]
-    );
-
     if (!item) {
         return null;
     }
@@ -86,12 +81,7 @@ export const EditModal = ({
 
                     <div className="form-group">
                         <label>Korlap:</label>
-                        <select name="korlap" value={editForm.korlap || ""} onChange={handleChange} disabled={!editForm.workzone}>
-                            <option value="">- Pilih Korlap -</option>
-                            {korlapOptions.map((name) => (
-                                <option key={name} value={name}>{name}</option>
-                            ))}
-                        </select>
+                        <input name="korlap" value={editForm.korlap || ""} disabled className="disabled-input" />
                     </div>
                     
                     {Object.keys(editForm).filter(key => 

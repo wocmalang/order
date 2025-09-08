@@ -1,55 +1,52 @@
-/* frontend/src/pages/LihatWO/LihatWO.css */
+/* ==========================================================================
+   1. Konfigurasi Global & Variabel
+   ========================================================================== */
+:root {
+  --background-main: #f8f9fa;
+  --background-card: #ffffff;
+  --border-color: #dee2e6;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --telkom-red: #e51e25;
+  --telkom-black: #212529;
+  --telkom-white: #ffffff;
+  --telkom-grey-light: #f1f3f5;
+  --telkom-grey-medium: #adb5bd;
+  --telkom-grey-dark: #495057;
+  --primary-accent: #4a90e2; /* Aksen biru untuk highlight */
+}
 
+
+/* ==========================================================================
+   2. Layout & Container Utama
+   ========================================================================== */
 .lihat-wo-container {
-  width: 100%;
-  min-height: 100vh;
+  padding: 24px;
+  background-color: var(--background-main);
   display: flex;
   flex-direction: column;
-  padding: 1.5rem;
+  gap: 24px;
+  min-height: 100vh;
   box-sizing: border-box;
 }
 
 .page-header h1 {
-  text-align: center;
+  text-align: left;
   color: var(--text-primary);
-  margin-bottom: 2rem;
-  font-size: 2rem;
-  letter-spacing: 1px;
+  margin: 0 0 16px 0;
+  font-size: 28px;
+  font-weight: 700;
 }
 
-.loading-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 400px;
-  color: var(--telkom-grey-medium);
-  font-size: 1.2rem;
-}
-.loading-spinner {
-  border: 4px solid var(--telkom-grey-light);
-  border-top: 4px solid var(--telkom-red);
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
-  margin-right: 1rem;
-}
 
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
+/* ==========================================================================
+   3. Panel Kontrol (Filter & Aksi)
+   ========================================================================== */
 .table-controls {
   background: var(--background-card);
   border-radius: 14px;
   padding: 1.2rem 1.5rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -68,7 +65,7 @@
   width: 100%;
   max-width: 400px;
   padding: 0.7rem 1rem;
-  border: 2px solid var(--border-color);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 1rem;
   background: #fdfdff;
@@ -78,8 +75,7 @@
 .search-input:focus {
   outline: none;
   border-color: var(--telkom-red);
-  background: var(--background-card);
-  box-shadow: 0 0 0 2px rgba(229, 30, 37, 0.2);
+  box-shadow: 0 0 0 3px rgba(229, 30, 37, 0.15);
 }
 
 .filter-box {
@@ -93,9 +89,6 @@
   gap: 1rem;
   flex-wrap: wrap;
   align-items: flex-end;
-  padding: 0.5rem;
-  border: 1px solid #edf2f7;
-  border-radius: 8px;
 }
 
 .filter-item {
@@ -111,14 +104,7 @@
   margin-left: 0.2rem;
 }
 
-.action-section {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  padding-top: 0.5rem;
-}
-
+/* --- Gaya Dropdown Modern --- */
 .filter-item select,
 .form-group select {
   -webkit-appearance: none;
@@ -127,30 +113,77 @@
   background-color: #fdfdff;
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  padding: 0.5rem 2.5rem 0.5rem 1rem;
+  padding: 0.6rem 2.5rem 0.6rem 1rem;
   font-size: 0.95rem;
   color: var(--text-primary);
   cursor: pointer;
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 0.5rem center;
+  background-position: right 0.7rem center;
   background-repeat: no-repeat;
-  background-size: 1.5em 1.5em;
+  background-size: 1.2em 1.2em;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .filter-item select:hover,
 .form-group select:hover {
-  border-color: #cbd5e0;
+  border-color: var(--telkom-grey-medium);
 }
 
+.filter-item select:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--telkom-red);
+  box-shadow: 0 0 0 3px rgba(229, 30, 37, 0.15);
+}
+
+.action-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+
+/* ==========================================================================
+   4. Tombol Aksi
+   ========================================================================== */
+.btn {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-danger { background-color: #dc3545; color: white; }
+.btn-primary { background-color: var(--telkom-red); color: white; }
+.btn-outline { background-color: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); }
+
+
+/* ==========================================================================
+   5. Tabel Data
+   ========================================================================== */
 .table-container {
   overflow-x: auto;
-  border: 1px solid var(--border-color);
   border-radius: 14px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
   background: var(--background-card);
-  flex-grow: 1;
-  min-height: 0;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .wo-table {
@@ -170,48 +203,22 @@
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
-  transition: background-color 0.2s ease;
-}
-
-.wo-table th:hover {
-  background: var(--telkom-grey-dark);
-}
-
-.sort-icon {
-  margin-left: 8px;
-  font-size: 12px;
-  display: inline-block;
-  width: 1em;
-  text-align: center;
-  color: var(--telkom-grey-medium);
-}
-
-.wo-table th:hover .sort-icon {
-  color: var(--telkom-white);
-}
-.sort-icon.asc,
-.sort-icon.desc {
-  color: var(--telkom-white);
 }
 
 .wo-table td {
   padding: 0.7rem 1rem;
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
-  background: var(--background-card);
   transition: background-color 0.2s ease;
-  position: relative;
 }
 
-.wo-table tbody tr:nth-child(even) {
-  background-color: #f8fafc;
-}
-.wo-table tbody tr:hover {
+.wo-table tbody tr:hover td {
   background-color: #e9f0fb;
 }
-.wo-table tbody tr.selected {
+
+.wo-table tbody tr.selected td {
   background-color: #ebf8ff !important;
-  box-shadow: inset 4px 0 0 #4299e1;
+  box-shadow: inset 4px 0 0 var(--primary-accent);
 }
 
 .no-data {
@@ -221,126 +228,84 @@
 }
 
 .aksi-cell {
-  display: flex;
-  gap: 0.5rem;
-  min-width: auto;
-  position: relative;
-  overflow: visible;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background-color: inherit; /* Mewarisi warna background dari <tr> */
 }
 
-.data-cell.truncate {
-  font-size: 0.9rem;
-  max-width: 250px;
+/* ==========================================================================
+   6. Dropdown Kustom di Dalam Tabel
+   ========================================================================== */
+.interactive-cell .custom-dropdown {
+  width: 100%;
+  min-width: 160px;
+}
+
+.interactive-cell .dropdown-toggle {
+  width: 100%;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0.5rem 2.5rem 0.5rem 1rem;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  transition: border-color 0.2s, background-color 0.2s;
 }
 
-.interactive-cell {
-  font-size: 0.9rem;
-  position: relative;
-}
-
-.btn {
-  padding: 0.6rem 1.2rem;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  border: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  transition: all 0.2s ease;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.btn-danger {
-  background-color: var(--telkom-red);
-  color: white;
-}
-.btn-danger:hover:not(:disabled) {
-  background-color: #c53030;
-}
-.btn-primary {
-  background-color: var(--telkom-red);
-  color: white;
-}
-.btn-primary:hover:not(:disabled) {
-  background-color: #b91c22;
-}
-.btn-outline {
-  background-color: transparent;
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-}
-.btn-outline:hover:not(:disabled) {
-  background-color: var(--telkom-grey-light);
-  border-color: #cbd5e0;
-}
-
-.pagination {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  margin-top: 1.5rem;
-  background: var(--background-card);
-  border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.page-info {
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-.pagination button {
-  background: var(--telkom-white);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color);
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease,
-    color 0.2s ease;
-}
-.pagination button:hover:not(:disabled) {
-  background: var(--telkom-grey-light);
+.wo-table tbody tr:hover .interactive-cell .dropdown-toggle {
   border-color: var(--telkom-grey-medium);
-}
-.pagination button:disabled {
-  background: var(--telkom-grey-light);
-  color: var(--telkom-grey-medium);
-  cursor: not-allowed;
-}
-.page-number {
-  margin: 0 0.75rem;
-  font-weight: 500;
+  background-color: var(--background-card);
 }
 
+/* Menu dropdown yang muncul */
+.dropdown-menu-portal {
+  background-color: var(--background-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 1100;
+  margin-top: 4px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.dropdown-item {
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease;
+}
+.dropdown-item:hover { background-color: #f0f4fe; }
+.dropdown-item.selected {
+  background-color: var(--telkom-red);
+  color: var(--telkom-white);
+  font-weight: 600;
+}
+
+
+/* ==========================================================================
+   7. Modal & Form
+   ========================================================================== */
 .format-modal {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
   background: rgba(0, 0, 0, 0.4);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
 .format-modal-content {
   background: var(--background-card);
   border-radius: 16px;
@@ -349,16 +314,15 @@
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
-  animation: popIn 0.2s;
 }
+
 .format-modal-content h2 {
   margin-top: 0;
   margin-bottom: 1.5rem;
   color: var(--telkom-red);
 }
-.form-group {
-  margin-bottom: 1rem;
-}
+
+.form-group { margin-bottom: 1rem; }
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
@@ -371,208 +335,62 @@
   border-radius: 8px;
   border: 1px solid var(--border-color);
   font-size: 1rem;
-}
-.form-actions {
-  margin-top: 1.5rem;
-  display: flex;
-  gap: 0.75rem;
-}
-.format-pre {
-  background: var(--telkom-grey-light);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 1rem;
-  font-size: 0.9rem;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+  box-sizing: border-box;
 }
 
-.column-selector {
-  background: #fdfdff;
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 1.2rem 1.5rem;
-  margin-bottom: 1.5rem;
-  animation: fadeIn 0.3s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+.disabled-input {
+  background-color: var(--telkom-grey-light) !important;
+  color: var(--text-secondary) !important;
+  cursor: not-allowed !important;
 }
-.column-selector h4 {
-  margin-top: 0;
-  margin-bottom: 1rem;
-}
-.column-selector-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.75rem;
-}
-.column-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.column-item label {
-  text-transform: capitalize;
-  cursor: pointer;
-}
-.column-item input[type="checkbox"] {
-  cursor: pointer;
-}
-.column-selector-actions {
+
+.form-actions {
   margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
 }
 
-.custom-dropdown {
-  position: relative;
-  width: 100%;
-  min-width: 150px;
-  font-size: 0.9rem;
-}
-.custom-dropdown.disabled .dropdown-toggle {
-  background-color: #edf2f7;
-  cursor: not-allowed;
-  color: #a0aec0;
-}
-.dropdown-toggle {
-  width: 100%;
-  background-color: var(--background-main);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 0.4rem 2rem 0.4rem 0.8rem;
-  font-size: 0.9rem;
-  color: var(--text-primary);
-  cursor: pointer;
-  text-align: left;
+
+/* ==========================================================================
+   8. State Lainnya
+   ========================================================================== */
+.loading-container, .error-container {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  justify-content: center;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 400px;
+  color: var(--telkom-grey-medium);
+  font-size: 1.2rem;
 }
-.dropdown-arrow {
-  position: absolute;
-  right: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 0.7rem;
-}
-.dropdown-menu-portal {
-  background-color: var(--background-card);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  z-index: 1100;
-  margin-top: 4px;
-  max-height: 320px;
-  overflow-y: auto;
-  min-width: 150px;
-}
-.dropdown-item {
-  padding: 0.6rem 0.8rem;
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 0.9rem;
-  transition: background-color 0.2s ease;
-}
-.dropdown-item:hover {
-  background-color: #f0f4fe;
-}
-.dropdown-item.selected {
-  background-color: var(--telkom-red);
-  color: var(--telkom-white);
-  font-weight: 600;
-}
-.error-container {
-  padding: 2rem;
-  text-align: center;
-  background-color: #fff5f5;
-  border: 1px solid #fc8181;
-  border-radius: 12px;
-  margin: 2rem 0;
-}
-.error-container h2 {
-  color: #c53030;
-  margin-top: 0;
-}
-.error-message {
-  background-color: #fed7d7;
-  color: #742a2a;
-  padding: 1rem;
-  border-radius: 8px;
-  text-align: left;
-  white-space: pre-wrap;
-  word-break: break-all;
-  font-family: monospace;
-  margin-top: 1rem;
-  margin-bottom: 1rem;
+.loading-spinner {
+  border: 4px solid var(--telkom-grey-light);
+  border-top: 4px solid var(--telkom-red);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-@keyframes popIn {
-  from {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+
+/* ==========================================================================
+   9. Media Queries untuk Responsivitas
+   ========================================================================== */
 @media (max-width: 900px) {
   .table-controls {
     flex-direction: column;
     align-items: stretch;
-    padding: 1rem 0.5rem;
-  }
-  .action-section {
-    justify-content: flex-start;
-    gap: 0.5rem;
-  }
-  .column-selector {
-    padding: 1rem 0.5rem;
   }
 }
 
 @media (max-width: 768px) {
-  .lihat-wo-container {
-    padding: 1rem;
-  }
-  .data-cell.truncate {
-    font-size: 0.8rem;
-    max-width: 120px;
-  }
-  .btn {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.8rem;
-  }
-  .pagination button {
-    padding: 0.4rem 0.8rem;
-  }
-  .wo-table th,
-  .wo-table td {
-    padding: 0.5rem;
-  }
-  .table-container {
-    border-radius: 8px;
-  }
-  .format-modal-content {
-    padding: 1rem;
-    max-width: 98vw;
-  }
+  .lihat-wo-container { padding: 1rem; }
+  .btn { padding: 0.6rem 1rem; font-size: 0.9rem; }
+  .pagination button { padding: 0.5rem 0.8rem; }
+  .wo-table th, .wo-table td { padding: 0.6rem 0.8rem; }
+  .format-modal-content { padding: 1.5rem; max-width: 95vw; }
 }

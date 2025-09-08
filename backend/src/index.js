@@ -57,7 +57,7 @@ router.get("/", () => {
   return jsonResponse({
     status: 'ok',
     message: 'Backend API is running.',
-    version: '1.2.1',
+    version: '1.3.0',
   });
 });
 
