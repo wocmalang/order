@@ -504,83 +504,94 @@ router.get("/workzones", async (request, env) => {
 });
 
 /**
- * ENDPOINT: Mengambil peta workzone beserta korlap dari D1
- * Metode: GET
+ * ENDPOINT: Mengambil peta workzone beserta korlap dan sektor.
  * URL: /workzone-map
  */
 router.get("/workzone-map", async (request, env) => {
-  if (!env.DB) {
-    return json({ error: "Database not configured" }, { status: 500 });
-  }
   try {
-    const stmt = env.DB.prepare("SELECT sektor, workzone, korlap_username FROM workzone_details ORDER BY sektor, workzone");
+    // --- INI ADALAH PERBAIKANNYA ---
+    // Query ini mengambil data workzone dan korlap yang sudah digabungkan menjadi string
+    const stmt = env.DB.prepare(`
+      SELECT 
+        workzone, 
+        sektor, 
+        GROUP_CONCAT(korlap_username, ', ') AS korlaps 
+      FROM workzone_details 
+      GROUP BY workzone, sektor 
+      ORDER BY workzone
+    `);
     const { results } = await stmt.all();
-
-    const workzoneGroups = results.reduce((acc, { sektor, workzone, korlap_username }) => {
-      const key = `${sektor}|${workzone}`;
-      if (!acc[key]) {
-        acc[key] = { sektor, workzone, korlaps: [] };
-      }
-      if (korlap_username) {
-        acc[key].korlaps.push(korlap_username);
-      }
-      return acc;
-    }, {});
-
-    return json(Object.values(workzoneGroups));
+    return jsonResponse(results);
   } catch (err) {
     console.error("Gagal mengambil peta workzone:", err);
-    return json({ error: "Terjadi kesalahan pada server" }, { status: 500 });
+    return jsonResponse({ error: "Terjadi kesalahan pada server" }, { status: 500 });
   }
 });
 
 /**
- * ENDPOINT: Mengedit Work Order di D1
+ * ENDPOINT: Mengedit Work Order.
  * Metode: PUT
  * URL: /work-orders/:incident
  */
-router.put("/work-orders/:incident", async (request, env) => {
-  if (!env.DB) {
-    return json({ error: "Database not configured" }, { status: 500 });
-  }
+// --- PERBAIKAN: Semua kolom sekarang diizinkan untuk di-update ---
+const ALLOWED_UPDATE_KEYS = [
+  "incident", "korlap", "sektor", "workzone", "status", "summary", "reported_date",
+  "ticket_id_gamas", "external_ticket_id", "customer_id", "customer_name", 
+  "service_id", "service_no", "description_assignment", "reported_by", 
+  "reported_priority", "source_ticket", "channel", "contact_phone", 
+  "contact_name", "contact_email", "status_date", "booking_date", 
+  "resolve_date", "date_modified", "last_update_worklog", "closed_by", 
+  "closed_reopen_by", "guarantee_status", "ttr_customer", "ttr_agent", 
+  "ttr_mitra", "ttr_nasional", "th_pending", "th_region", "th_witel", 
+  "ttr_end_to_end", "owner_group", "owner", "witel", "region", "subsidiary", 
+  "territory_near_end", "territory_far_end", "customer_segment", 
+  "customer_type", "customer_category", "service_type", "slg", "technology", 
+  "lapul", "gaul", "onu_rx", "pending_reason", "incident_domain", "symptom", 
+  "hierarchy_path", "solution", "description_actual_solution", "kode_produk", 
+  "perangkat", "technician", "device_name", "sn_ont", "tipe_ont", 
+  "manufacture_ont", "impacted_site", "cause", "resolution", 
+  "worklog_summary", "classification_flag", "realm", "related_to_gamas", 
+  "toc_result", "scc_result", "note", "notes_eskalasi", "rk_information", 
+  "external_ticket_tier_3", "classification_path", "urgency", "alamat"
+];
 
+router.put("/work-orders/:incident", async (request, env) => {
   const { incident } = request.params;
   const data = await request.json();
 
   try {
-    const keysToUpdate = Object.keys(data).filter(key => key !== 'incident');
+    const keysToUpdate = Object.keys(data).filter(key => 
+      ALLOWED_UPDATE_KEYS.includes(key) && key !== 'incident' // Pastikan incident tidak di-update
+    );
+
     if (keysToUpdate.length === 0) {
-      return json({ success: false, message: "Tidak ada data untuk diperbarui." }, { status: 400 });
+      return jsonResponse({ success: false, message: "Tidak ada data valid untuk diperbarui." }, { status: 400 });
     }
 
     const setClauses = keysToUpdate.map(k => `${k} = ?`).join(', ');
     const values = keysToUpdate.map(key => data[key]);
 
-    // Query untuk update data utama
     const updateStmt = env.DB.prepare(`UPDATE work_orders SET ${setClauses} WHERE incident = ?`).bind(...values, incident);
-
-    // D1 tidak mendukung transaksi, jadi kita jalankan query secara berurutan
     await updateStmt.run();
 
-    // Sinkronisasi alamat jika service_no ada di data
     if (data.service_no) {
       const { results: layanan } = await env.DB.prepare("SELECT alamat FROM data_layanan WHERE service_no = ?").bind(data.service_no).all();
       if (layanan && layanan.length > 0 && layanan[0].alamat) {
-        await env.DB.prepare("UPDATE work_orders SET alamat = ? WHERE service_no = ?").bind(layanan[0].alamat, data.service_no).run();
+        await env.DB.prepare("UPDATE work_orders SET alamat = ? WHERE incident = ?").bind(layanan[0].alamat, incident).run();
       }
     }
 
-    // Ambil data terbaru untuk dikembalikan
     const { results: updatedRows } = await env.DB.prepare("SELECT * FROM work_orders WHERE incident = ?").bind(incident).all();
     if (updatedRows.length === 0) {
-      return json({ success: false, message: "Work order tidak ditemukan setelah update." }, { status: 404 });
+      return jsonResponse({ success: false, message: "Work order tidak ditemukan setelah update." }, { status: 404 });
     }
 
-    return json({ success: true, message: `Work order berhasil diperbarui.`, data: updatedRows[0] });
+    return jsonResponse({ success: true, message: `Work order berhasil diperbarui.`, data: updatedRows[0] });
 
   } catch (err) {
     console.error("Gagal mengedit work order:", err);
-    return json({ success: false, error: err.message }, { status: 500 });
+    if (err.cause) console.error("Penyebab Error:", err.cause);
+    return jsonResponse({ success: false, error: "Terjadi kesalahan pada server.", message: err.message }, { status: 500 });
   }
 });
 

@@ -1,12 +1,11 @@
 /* frontend/src/pages/LihatWO/LihatWO.css */
 
-/* --- PERBAIKAN UTAMA BAGIAN 1: Mengatur kontainer utama sebagai flexbox --- */
 .lihat-wo-container {
   width: 100%;
-  min-height: 100vh; /* Menggunakan min-height agar konten tidak terpotong */
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  padding: 1.5rem; /* Menambahkan padding seperti di halaman Laporan */
+  padding: 1.5rem;
   box-sizing: border-box;
 }
 
@@ -144,15 +143,14 @@
   border-color: #cbd5e0;
 }
 
-/* --- PERBAIKAN UTAMA BAGIAN 2: Memastikan kontainer tabel dapat di-scroll --- */
 .table-container {
-  overflow-x: auto; /* Paling Penting: Mengizinkan scroll horizontal */
+  overflow-x: auto;
   border: 1px solid var(--border-color);
   border-radius: 14px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
   background: var(--background-card);
-  flex-grow: 1; /* Mengisi sisa ruang vertikal */
-  min-height: 0; /* Mencegah flex item meluap dari kontainer */
+  flex-grow: 1;
+  min-height: 0;
 }
 
 .wo-table {
@@ -171,7 +169,7 @@
   z-index: 10;
   cursor: pointer;
   user-select: none;
-  white-space: nowrap; /* Mencegah judul kolom terpotong */
+  white-space: nowrap;
   transition: background-color 0.2s ease;
 }
 

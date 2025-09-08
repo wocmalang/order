@@ -1,14 +1,24 @@
-// src/components/CustomDropdown.jsx
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 
-const CustomDropdown = ({ options, value, onChange, placeholder, disabled }) => {
-  // ... (kode dari CustomDropdown di file asli Anda)
-  // Salin dan tempel seluruh kode komponen CustomDropdown di sini
+const CustomDropdown = ({
+  options = [],
+  value,
+  onChange,
+  placeholder = "- Pilih -",
+  disabled = false,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState(null);
   const dropdownRef = useRef(null);
   const menuRef = useRef(null);
+
+  // PERBAIKAN 1: Cari objek opsi yang lengkap berdasarkan 'value' yang diberikan.
+  // 'value' adalah nilai primitif (misal: "BLB"), 'options' adalah array objek.
+  const selectedOption = useMemo(
+    () => options.find((opt) => opt.value === value),
+    [options, value]
+  );
 
   const handleSelect = (optionValue) => {
     onChange(optionValue);
@@ -66,11 +76,12 @@ const CustomDropdown = ({ options, value, onChange, placeholder, disabled }) => 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  const displayValue = value || placeholder;
+  // PERBAIKAN 2: Tampilkan 'label' dari opsi yang dipilih, bukan 'value'-nya.
+  const displayValue = selectedOption ? selectedOption.label : placeholder;
 
   return (
     <div className={`custom-dropdown ${disabled ? "disabled" : ""}`} ref={dropdownRef}>
-      <button type="button" className="dropdown-toggle" onClick={toggleDropdown}>
+      <button type="button" className="dropdown-toggle" onClick={toggleDropdown} disabled={disabled}>
         {displayValue}
         <span className="dropdown-arrow">{isOpen ? "🔼" : "🔽"}</span>
       </button>
@@ -87,10 +98,14 @@ const CustomDropdown = ({ options, value, onChange, placeholder, disabled }) => 
               width: `${menuPosition.width}px`,
             }}
           >
-            {placeholder && <div className="dropdown-item" onClick={() => handleSelect("")}>{placeholder}</div>}
+            {/* PERBAIKAN 3: Logika pemetaan (mapping) disesuaikan untuk objek */}
             {options.map((opt) => (
-              <div key={opt} className={`dropdown-item ${opt === value ? "selected" : ""}`} onClick={() => handleSelect(opt)}>
-                {opt}
+              <div
+                key={opt.value} // Gunakan .value untuk key yang unik
+                className={`dropdown-item ${opt.value === value ? "selected" : ""}`} // Bandingkan dengan .value
+                onClick={() => handleSelect(opt.value)} // Kirim .value saat diklik
+              >
+                {opt.label} {/* Tampilkan .label untuk teks */}
               </div>
             ))}
           </div>,

@@ -64,7 +64,7 @@ const LihatWO = () => {
 
         const woResult = await woResponse.json();
         const workzoneMapResult = await workzoneMapResponse.json();
-
+        
         setWoData(Array.isArray(woResult.data) ? woResult.data : []);
         setWorkzoneMap(Array.isArray(workzoneMapResult) ? workzoneMapResult : []);
       } catch (err) {
@@ -82,16 +82,23 @@ const LihatWO = () => {
     const match = workzoneMap.find((m) => m.workzone === workzone);
     return match ? match.sektor : "";
   }, [workzoneMap]);
-
+  
   const getKorlapsForWorkzone = useCallback((workzone) => {
     if (!workzone) return [];
     const match = workzoneMap.find((m) => m.workzone === workzone);
-    return match ? (match.korlaps || []).sort() : [];
+    return match ? (match.korlaps || "").split(',').map(k => k.trim()) : [];
   }, [workzoneMap]);
 
   const getWorkzonesForSektor = useCallback((sektor) => {
     if (!sektor) return [];
     return workzoneMap.filter((m) => m.sektor === sektor).map((m) => m.workzone).sort();
+  }, [workzoneMap]);
+
+  const workzoneToKorlapMap = useMemo(() => {
+    if (!workzoneMap) return {};
+    return Object.fromEntries(
+      workzoneMap.map(item => [item.workzone, item.korlaps])
+    );
   }, [workzoneMap]);
 
   const allKeys = useMemo(() => ALL_POSSIBLE_KEYS, []);
@@ -108,16 +115,23 @@ const LihatWO = () => {
     const allSektors = [...new Set(workzoneMap.map((item) => item.sektor))].sort();
     const allWorkzones = [...new Set(workzoneMap.map((item) => item.workzone))].sort();
     const availableWorkzones = filter.sektor ? getWorkzonesForSektor(filter.sektor) : allWorkzones;
-    const availableKorlaps = filter.workzone ? getKorlapsForWorkzone(filter.workzone) : [...new Set(workzoneMap.flatMap((item) => item.korlaps))].sort();
+    
+    // Menggunakan Set untuk memastikan keunikan string korlap
+    const allKorlaps = [...new Set(workzoneMap.map(item => item.korlaps).filter(Boolean))].sort();
+    
+    const availableKorlaps = filter.workzone 
+      ? (workzoneToKorlapMap[filter.workzone] ? [workzoneToKorlapMap[filter.workzone]] : [])
+      : allKorlaps;
+
     return {
       statusOptions: ALL_STATUS_OPTIONS,
       witelOptions: Array.from(new Set(woData.map((d) => d.witel).filter(Boolean))).sort(),
       sektorOptions: allSektors,
       workzoneFilterOptions: availableWorkzones,
       korlapFilterOptions: availableKorlaps,
-      allWorkzoneOptions: allWorkzones,
+      allWorkzoneOptions: allWorkzones.map(wz => ({ label: wz, value: wz })),
     };
-  }, [woData, filter.sektor, filter.workzone, workzoneMap, getWorkzonesForSektor, getKorlapsForWorkzone]);
+  }, [woData, filter.sektor, filter.workzone, workzoneMap, getWorkzonesForSektor, workzoneToKorlapMap]);
 
   const sortedData = useMemo(() => {
     const filtered = woData.filter((item) => {
@@ -166,6 +180,7 @@ const LihatWO = () => {
       const newWorkzone = updatedFields.workzone;
       const newSektor = getSektorForWorkzone(newWorkzone);
       finalUpdatedFields.sektor = newSektor;
+      finalUpdatedFields.korlap = workzoneToKorlapMap[newWorkzone] || null;
     }
 
     const optimisticData = { ...originalItem, ...finalUpdatedFields };
@@ -178,18 +193,24 @@ const LihatWO = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(optimisticData),
       });
+
+      if (!response.ok) {
+        // Coba baca pesan error dari backend jika ada
+        const errorData = await response.json().catch(() => ({ message: "Gagal menyimpan dan membaca error" }));
+        throw new Error(errorData.message || "Gagal menyimpan");
+      }
+
       const result = await response.json();
-      if (!result.success) throw new Error(result.message || "Gagal menyimpan");
       setWoData((prev) => prev.map((d) => (d.incident === incidentId ? result.data : d)));
     } catch (error) {
       console.error("Gagal update data:", error);
-      alert("Gagal memperbarui data. Mengembalikan ke kondisi semula.");
+      alert(`Gagal memperbarui data: ${error.message}. Mengembalikan ke kondisi semula.`);
       setWoData((prev) => prev.map((d) => (d.incident === incidentId ? originalItem : d)));
     } finally {
       setUpdatingStatus((p) => ({ ...p, [incidentId]: false }));
     }
   };
-
+  
   const handleEditSave = useCallback(async (updatedItem) => {
     try {
       const response = await fetch(`${API_BASE_URL}/work-orders/${editItem.incident}`, {
@@ -206,6 +227,7 @@ const LihatWO = () => {
     }
   }, [editItem]);
 
+  // ... Sisa handler lainnya tetap sama (handleDelete, handleCompleteTicket, etc.)
   const handleDelete = async (incident) => {
     if (window.confirm("Yakin ingin menghapus data ini?")) {
       try {
@@ -293,7 +315,7 @@ const LihatWO = () => {
     }
     setShowColumnSelector(false);
   };
-
+  
   if (isLoading) return <div className="loading-container"><div className="loading-spinner"></div> <p>Memuat data...</p></div>;
   if (error) return <div className="lihat-wo-container"><div className="error-container"><h2>Gagal Memuat Data</h2><p>Terjadi kesalahan saat mengambil data dari server.</p><pre className="error-message">{error}</pre><p><strong>Pastikan server backend Anda berjalan</strong> dan alamat API sudah benar.</p></div></div>;
 
@@ -311,7 +333,13 @@ const LihatWO = () => {
             <div className="filter-group">
               <div className="filter-item"><label>Sektor</label><select value={filter.sektor} onChange={(e) => handleFilterChange("sektor", e.target.value)}><option value="">Semua Sektor</option>{sektorOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}</select></div>
               <div className="filter-item"><label>Workzone</label><select value={filter.workzone} onChange={(e) => handleFilterChange("workzone", e.target.value)}><option value="">Semua Workzone</option>{workzoneFilterOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}</select></div>
-              <div className="filter-item"><label>Korlap</label><select value={filter.korlap} onChange={(e) => handleFilterChange("korlap", e.target.value)}><option value="">Semua Korlap</option>{korlapFilterOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}</select></div>
+              <div className="filter-item"><label>Korlap</label><select value={filter.korlap} onChange={(e) => handleFilterChange("korlap", e.target.value)}><option value="">Semua Korlap</option>
+  
+  {/* --- THIS IS THE LINE TO CHANGE --- */}
+  {korlapFilterOptions.map((opt, index) => (
+    <option key={`${opt}-${index}`} value={opt}>{opt}</option>
+  ))}
+              </select></div>
             </div>
           </div>
         </div>
@@ -360,10 +388,8 @@ const LihatWO = () => {
                   onFormat={setFormatIncident}
                   onCopy={handleCopy}
                   onComplete={handleCompleteTicket}
-                  statusOptions={statusOptions}
+                  statusOptions={ALL_STATUS_OPTIONS.map(opt => ({ label: opt, value: opt }))}
                   allWorkzoneOptions={allWorkzoneOptions}
-                  getKorlapsForWorkzone={getKorlapsForWorkzone}
-                  sektorOptions={sektorOptions}
                 />
               ))
             )}

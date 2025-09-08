@@ -9,28 +9,23 @@ export const EditModal = ({
     getWorkzonesForSektor,
     getKorlapsForWorkzone
 }) => {
-    // State untuk menyimpan data form, diinisialisasi dengan data item
     const [editForm, setEditForm] = useState(item);
 
-    // Efek ini memastikan form di-update jika item yang diedit berubah
     useEffect(() => {
         setEditForm(item);
     }, [item]);
 
-    // Fungsi untuk menangani semua perubahan pada input form
     const handleChange = (e) => {
         const { name, value } = e.target;
         setEditForm((prev) => {
             let newState = { ...prev, [name]: value };
 
-            // Jika 'workzone' berubah, update 'sektor' secara otomatis
             if (name === "workzone") {
                 const newSektor = getSektorForWorkzone(value);
                 newState.sektor = newSektor;
-                newState.korlap = ""; // Reset korlap karena workzone berubah
+                newState.korlap = "";
             }
 
-            // Jika 'sektor' berubah, reset 'workzone' dan 'korlap'
             if (name === "sektor") {
                 newState.workzone = "";
                 newState.korlap = "";
@@ -41,13 +36,11 @@ export const EditModal = ({
     };
 
 
-    // Fungsi untuk mengirim data saat form di-submit
     const handleSubmit = (e) => {
         e.preventDefault();
         onSave(editForm);
     };
 
-    // Memoized options untuk dropdown yang dependen
     const workzoneOptions = useMemo(
         () => (editForm?.sektor ? getWorkzonesForSektor(editForm.sektor) : []),
         [editForm?.sektor, getWorkzonesForSektor]
@@ -58,7 +51,6 @@ export const EditModal = ({
         [editForm?.workzone, getKorlapsForWorkzone]
     );
 
-    // Jangan render apapun jika tidak ada item
     if (!item) {
         return null;
     }
@@ -68,13 +60,11 @@ export const EditModal = ({
             <div className="format-modal-content" onClick={(e) => e.stopPropagation()}>
                 <h2>Edit Incident: {item.incident}</h2>
                 <form onSubmit={handleSubmit}>
-                    {/* Incident (Read-only) */}
                     <div className="form-group">
                         <label>Incident:</label>
                         <input name="incident" value={editForm.incident || ""} onChange={handleChange} disabled />
                     </div>
 
-                    {/* Sektor Dropdown */}
                     <div className="form-group">
                         <label>Sektor:</label>
                         <select name="sektor" value={editForm.sektor || ""} onChange={handleChange}>
@@ -85,7 +75,6 @@ export const EditModal = ({
                         </select>
                     </div>
 
-                    {/* Workzone Dropdown (Tergantung Sektor) */}
                     <div className="form-group">
                         <label>Workzone:</label>
                         <select name="workzone" value={editForm.workzone || ""} onChange={handleChange} disabled={!editForm.sektor}>
@@ -96,7 +85,6 @@ export const EditModal = ({
                         </select>
                     </div>
 
-                    {/* Korlap Dropdown (Tergantung Workzone) */}
                     <div className="form-group">
                         <label>Korlap:</label>
                         <select name="korlap" value={editForm.korlap || ""} onChange={handleChange} disabled={!editForm.workzone}>
@@ -107,7 +95,6 @@ export const EditModal = ({
                         </select>
                     </div>
                     
-                    {/* Tampilkan sisa field lainnya yang bisa diedit */}
                     {Object.keys(editForm).filter(key => 
                         !["incident", "sektor", "workzone", "korlap", "created_at", "updated_at"].includes(key)
                     ).map(key => (
@@ -117,7 +104,6 @@ export const EditModal = ({
                         </div>
                     ))}
                     
-                    {/* Tombol Aksi */}
                     <div className="form-actions">
                         <button type="submit" className="btn btn-primary">Simpan</button>
                         <button type="button" className="btn btn-outline" onClick={onClose}>Batal</button>
