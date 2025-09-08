@@ -1,174 +1,119 @@
-Work Order Management System
-1. Ikhtisar Proyek
-Aplikasi ini adalah sistem manajemen Work Order (WO) atau insiden berbasis web. Aplikasi ini memungkinkan pengguna untuk melakukan input data insiden secara massal, mengelola tiket yang aktif, dan melihat laporan dari tiket yang sudah selesai.
-
-Fokus utama dari sistem ini adalah otomatisasi proses bisnis, seperti perhitungan Time to Resolution (TTR) dan pengarsipan tiket secara sistematis. Berdasarkan kode yang ada, sistem ini primernya menggunakan backend Express.js dengan database MySQL.
-
-2. Struktur Proyek
-Repositori ini terdiri dari beberapa bagian utama:
-
-/frontend: Aplikasi antarmuka pengguna (UI) yang dibangun menggunakan React dan Vite. Semua komponen visual dan interaksi pengguna berada di sini.
-
-/express: Backend utama aplikasi yang dibangun menggunakan Express.js. Direktori ini berisi semua logika sisi server, koneksi ke database MySQL, dan API endpoint.
-
-/backend: Backend alternatif yang dirancang untuk platform serverless Cloudflare Workers dengan database D1. Saat ini, backend yang aktif digunakan adalah yang ada di direktori /express.
-
-3. Tumpukan Teknologi (Tech Stack)
-Frontend
-Framework: React 19
-
-Build Tool: Vite
-
-Routing: React Router DOM
-
-Charting: Chart.js
-
-Ekspor Data: xlsx untuk Excel, jspdf & jspdf-autotable untuk PDF
-
-Backend (Express)
-Framework: Express.js
-
-Database: MySQL
-
-Driver MySQL: mysql2/promise
-
-Date/Time Handling: moment-timezone
-
-4. Konfigurasi dan Instalasi
-Prasyarat
-Node.js (versi 18 atau lebih tinggi)
-
-Server Database MySQL yang sedang berjalan
-
-Pengaturan Backend (Express)
-Masuk ke direktori express:
-
-Bash
-
-cd express
-Instal dependensi:
-
-Bash
-
-npm install
-Buat file .env di dalam direktori express dan isi variabel berikut sesuai dengan konfigurasi database Anda:
-
-Cuplikan kode
-
-MYSQL_HOST=localhost
-MYSQL_USER=root
-MYSQL_DB=nama_database_anda
-MYSQL_PASSWORD=password_anda
-PORT=3001
-Jalankan server backend:
-
-Bash
-
-npm start
-Server akan berjalan di http://localhost:3001.
-
-Pengaturan Frontend
-Masuk ke direktori frontend:
-
-Bash
-
-cd frontend
-Instal dependensi:
-
-Bash
-
-npm install
-Buat file .env di dalam direktori frontend untuk menghubungkan ke backend:
-
-Cuplikan kode
-
-VITE_API_BASE_URL=http://localhost:3001
-Jalankan aplikasi frontend:
-
-Bash
-
-npm run dev
-Aplikasi akan tersedia di http://localhost:5173 (atau port lain yang tersedia).
-
-5. Skema Database (MySQL)
-Berdasarkan analisis kode, berikut adalah tabel utama yang dibutuhkan oleh aplikasi:
-
-incidents: Menyimpan semua data work order yang aktif.
-
-incident (PRIMARY KEY)
-
-status (e.g., 'OPEN', 'BACKEND', 'RESOLVED', 'CLOSED')
-
-reported_date (DATETIME)
-
-resolve_date (DATETIME, nullable)
-
-workzone (VARCHAR)
-
-sektor (VARCHAR, nullable)
-
-ttr_customer, ttr_agent, ttr_mitra, dst. (VARCHAR, nullable)
-
-...dan kolom lainnya sesuai allowedFields di InputWO.jsx.
-
-reports: Berfungsi sebagai arsip untuk incidents yang sudah selesai. Strukturnya identik dengan tabel incidents.
-
-workzone_map: Tabel pemetaan untuk mengisi data sektor secara otomatis.
-
-workzone
-
-sektor
-
-6. API Endpoints (Express)
-Berikut adalah endpoint utama yang diekspos oleh backend Express (/express/routes/apiRoutes.js).
-
-GET /view-mysql
-
-Fungsi: Mengambil semua data dari tabel incidents.
-
-Respons: 200 OK dengan array data insiden.
-
-GET /workzone-map
-
-Fungsi: Mengambil data pemetaan dari tabel workzone_map.
-
-Respons: 200 OK dengan array data pemetaan.
-
-PUT /work-orders/:incident
-
-Fungsi: Memperbarui data insiden berdasarkan incident.
-
-Logika Bisnis:
-
-Jika status diubah menjadi RESOLVED atau CLOSED, endpoint ini akan otomatis mengisi resolve_date dan menghitung durasi TTR (Time to Resolution) dari reported_date.
-
-Jika status diubah kembali dari RESOLVED/CLOSED, endpoint akan menghapus nilai resolve_date dan ttr_*.
-
-Body: Objek JSON dengan field yang akan diperbarui.
-
-DELETE /work-orders/:incident
-
-Fungsi: Menghapus satu insiden dari tabel incidents.
-
-POST /work-orders/:incident/complete
-
-Fungsi: Memindahkan data insiden dari tabel incidents ke tabel reports. Proses ini dijalankan dalam sebuah transaksi database untuk memastikan integritas data.
-
-POST /reports/:incident/reopen (Terdapat di Frontend, diasumsikan ada di Backend)
-
-Fungsi: Mengembalikan tiket dari reports (arsip) ke incidents (aktif).
-
-7. Logika Kunci di Frontend
-Input Data (InputWO.jsx):
-
-Komponen ini mampu mem-parsing data dari berbagai format (TSV, JSON, Excel).
-
-Sebelum mengirim ke backend, data diperkaya secara otomatis: kolom sektor diisi berdasarkan nilai workzone menggunakan data dari GET /workzone-map.
-
-Laporan (Report.jsx):
-
-Menampilkan data dari tabel reports dengan fitur filter berdasarkan rentang waktu.
-
-Menyajikan visualisasi data menggunakan Chart.js untuk menampilkan tren tiket yang selesai.
-
-Menyediakan fungsionalitas ekspor ke format Excel, CSV, dan PDF.
+# Work Order Management System
+
+## 1. Overview
+
+This application is a web-based Work Order (WO) or incident management system. It enables users to perform bulk data entry for incidents, manage active tickets, and view reports for completed tickets.
+
+The system's primary focus is on automating business processes, such as calculating Time to Resolution (TTR) and systematically archiving tickets. Based on the existing codebase, this system primarily utilizes an **Express.js backend** with a **MySQL database**.
+
+## 2. Project Structure
+
+The repository is organized into several key directories:
+
+-   `📁 /frontend`: The user interface (UI) application built with **React** and **Vite**. All visual components and user interactions are located here.
+-   `📁 /express`: The main backend of the application, built with **Express.js**. This directory contains all server-side logic, the connection to the MySQL database, and the API endpoints.
+-   `📁 /backend`: An alternative backend designed for the **Cloudflare Workers** serverless platform with a D1 database. The currently active backend is the one in the `/express` directory.
+
+## 3. Tech Stack
+
+### Frontend
+-   **Framework**: React 19
+-   **Build Tool**: Vite
+-   **Routing**: React Router DOM
+-   **Charting**: Chart.js
+-   **Data Export**: `xlsx` for Excel, `jspdf` & `jspdf-autotable` for PDF
+
+### Backend (Express)
+-   **Framework**: Express.js
+-   **Database**: MySQL
+-   **MySQL Driver**: `mysql2/promise`
+-   **Date/Time Handling**: `moment-timezone`
+
+## 4. Setup and Installation
+
+### Prerequisites
+-   Node.js (v18 or higher recommended)
+-   A running MySQL database server
+
+### Backend Setup (Express)
+1.  Navigate to the `express` directory:
+    ```bash
+    cd express
+    ```
+2.  Install the dependencies:
+    ```bash
+    npm install
+    ```
+3.  Create a `.env` file in the `express` directory and provide your database configuration:
+    ```env
+    MYSQL_HOST=localhost
+    MYSQL_USER=root
+    MYSQL_DB=your_database_name
+    MYSQL_PASSWORD=your_password
+    PORT=3001
+    ```
+4.  Start the backend server:
+    ```bash
+    npm start
+    ```
+    The server will be running at `http://localhost:3001`.
+
+### Frontend Setup
+1.  Navigate to the `frontend` directory:
+    ```bash
+    cd frontend
+    ```
+2.  Install the dependencies:
+    ```bash
+    npm install
+    ```
+3.  Create a `.env` file in the `frontend` directory to connect to the backend:
+    ```env
+    VITE_API_BASE_URL=http://localhost:3001
+    ```
+4.  Start the frontend development server:
+    ```bash
+    npm run dev
+    ```
+    The application will be accessible at `http://localhost:5173` (or another available port).
+
+## 5. Database Schema (MySQL)
+
+Based on the code analysis, the following tables are required by the application:
+
+1.  **`incidents`**: Stores all active work order data.
+    -   `incident` (PRIMARY KEY)
+    -   `status` (e.g., 'OPEN', 'BACKEND', 'RESOLVED', 'CLOSED')
+    -   `reported_date` (DATETIME)
+    -   `resolve_date` (DATETIME, nullable)
+    -   `workzone` (VARCHAR)
+    -   `sektor` (VARCHAR, nullable)
+    -   `ttr_customer`, `ttr_agent`, etc. (VARCHAR, nullable)
+    -   ...and other fields as defined in the `allowedFields` array in `InputWO.jsx`.
+2.  **`reports`**: Serves as an archive for completed incidents. Its structure is identical to the `incidents` table.
+3.  **`workzone_map`**: A mapping table used to automatically populate the `sektor` field.
+    -   `workzone`
+    -   `sektor`
+
+## 6. API Endpoints (Express)
+
+The following are the main endpoints exposed by the Express backend (`/express/routes/apiRoutes.js`):
+
+| Method | Endpoint                      | Description                                                                                                                                                                                                                                                                                             |
+| :----- | :---------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET`  | `/view-mysql`                 | Retrieves all records from the `incidents` table.                                                                                                                                                                     |
+| `GET`  | `/workzone-map`               | Fetches mapping data from the `workzone_map` table.                                                                                                                                                             |
+| `PUT`  | `/work-orders/:incident`      | Updates an incident by its ID. **Business Logic**: Automatically calculates TTR and sets `resolve_date` when the status changes to `RESOLVED` or `CLOSED`. It clears these fields if the ticket is reopened. |
+| `DELETE`| `/work-orders/:incident`    | Deletes a single incident from the `incidents` table.                                                                                                                                                           |
+| `POST` | `/work-orders/:incident/complete` | Moves an incident from the `incidents` table to the `reports` table. This is executed within a database transaction to ensure data integrity.                                                               |
+| `POST` | `/reports/:incident/reopen`   | *Inferred from frontend code*: Moves a ticket from the `reports` archive back to the active `incidents` list.                                                                                                        |
+
+## 7. Key Frontend Logic
+
+-   **Data Input (`InputWO.jsx`)**:
+    -   This component can parse data from multiple formats (TSV, JSON, Excel).
+    -   Before sending data to the backend, it is automatically enriched: the `sektor` field is populated based on the `workzone` value by using data from the `GET /workzone-map` endpoint.
+-   **Reporting (`Report.jsx`)**:
+    -   Displays data from the `reports` table with filtering capabilities by date range.
+    -   Presents a data visualization using `Chart.js` to show trends of completed tickets.
+    -   Provides export functionality to Excel, CSV, and PDF formats.
