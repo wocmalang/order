@@ -6,6 +6,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 const ReportChart = ({ filteredReports, isLoading }) => {
   const chartData = useMemo(() => {
+    // ... (logika chartData Anda tetap sama, tidak perlu diubah)
     if (filteredReports.length === 0) {
       return { labels: [], datasets: [] };
     }
@@ -58,6 +59,7 @@ const ReportChart = ({ filteredReports, isLoading }) => {
 
   const chartOptions = {
     responsive: true,
+    maintainAspectRatio: false, // <-- TAMBAHKAN BARIS INI
     plugins: {
       legend: { position: "top" },
       title: { display: true, text: "Tren Tiket Selesai", font: { size: 18 } },

@@ -254,12 +254,14 @@ tr:hover td.sticky-col {
 }
 
 .chart-container {
+  position: relative; /* PENTING: Agar chart bisa responsif */
   background-color: var(--background-card);
   padding: 1.5rem;
   border-radius: 14px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
   margin-top: 1.5rem;
-  max-height: 450px;
+  height: 450px; /* Gunakan height untuk ukuran yang pasti */
+  width: 100%; /* Pastikan container mengisi lebar yang tersedia */
 }
 
 .pagination-controls {
