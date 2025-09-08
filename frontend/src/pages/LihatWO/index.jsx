@@ -10,22 +10,22 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const ALL_POSSIBLE_KEYS = [
   "incident", "korlap", "sektor", "workzone", "status", "summary", "reported_date",
-  "ticket_id_gamas", "external_ticket_id", "customer_id", "customer_name", 
-  "service_id", "service_no", "description_assignment", "reported_by", 
-  "reported_priority", "source_ticket", "channel", "contact_phone", 
-  "contact_name", "contact_email", "status_date", "booking_date", 
-  "resolve_date", "date_modified", "last_update_worklog", "closed_by", 
-  "closed_reopen_by", "guarantee_status", "ttr_customer", "ttr_agent", 
-  "ttr_mitra", "ttr_nasional", "th_pending", "th_region", "th_witel", 
-  "ttr_end_to_end", "owner_group", "owner", "witel", "region", "subsidiary", 
-  "territory_near_end", "territory_far_end", "customer_segment", 
-  "customer_type", "customer_category", "service_type", "slg", "technology", 
-  "lapul", "gaul", "onu_rx", "pending_reason", "incident_domain", "symptom", 
-  "hierarchy_path", "solution", "description_actual_solution", "kode_produk", 
-  "perangkat", "technician", "device_name", "sn_ont", "tipe_ont", 
-  "manufacture_ont", "impacted_site", "cause", "resolution", 
-  "worklog_summary", "classification_flag", "realm", "related_to_gamas", 
-  "toc_result", "scc_result", "note", "notes_eskalasi", "rk_information", 
+  "ticket_id_gamas", "external_ticket_id", "customer_id", "customer_name",
+  "service_id", "service_no", "description_assignment", "reported_by",
+  "reported_priority", "source_ticket", "channel", "contact_phone",
+  "contact_name", "contact_email", "status_date", "booking_date",
+  "resolve_date", "date_modified", "last_update_worklog", "closed_by",
+  "closed_reopen_by", "guarantee_status", "ttr_customer", "ttr_agent",
+  "ttr_mitra", "ttr_nasional", "th_pending", "th_region", "th_witel",
+  "ttr_end_to_end", "owner_group", "owner", "witel", "region", "subsidiary",
+  "territory_near_end", "territory_far_end", "customer_segment",
+  "customer_type", "customer_category", "service_type", "slg", "technology",
+  "lapul", "gaul", "onu_rx", "pending_reason", "incident_domain", "symptom",
+  "hierarchy_path", "solution", "description_actual_solution", "kode_produk",
+  "perangkat", "technician", "device_name", "sn_ont", "tipe_ont",
+  "manufacture_ont", "impacted_site", "cause", "resolution",
+  "worklog_summary", "classification_flag", "realm", "related_to_gamas",
+  "toc_result", "scc_result", "note", "notes_eskalasi", "rk_information",
   "external_ticket_tier_3", "classification_path", "urgency", "alamat",
 ];
 
@@ -101,18 +101,23 @@ const LihatWO = () => {
     return match ? match.sektor : "";
   }, [workzoneMap]);
 
-  // --- PERBAIKAN KUNCI ADA DI SINI ---
-  // Membuat pemetaan yang lebih aman, bisa menerima `korlaps` atau `korlap` dari API
-  const workzoneToKorlapMap = useMemo(() => {
-    if (!workzoneMap) return {};
-    return Object.fromEntries(
-      workzoneMap.map(item => [item.workzone, item.korlaps || item.korlap])
-    );
+  const getKorlapsForWorkzone = useCallback((workzone) => {
+    if (!workzone) return [];
+    const match = workzoneMap.find((m) => m.workzone === workzone);
+    const korlapString = match ? (match.korlaps || match.korlap_username || "") : "";
+    return korlapString.split(',').map(k => k.trim()).filter(Boolean);
   }, [workzoneMap]);
 
   const getWorkzonesForSektor = useCallback((sektor) => {
     if (!sektor) return [];
     return workzoneMap.filter((m) => m.sektor === sektor).map((m) => m.workzone).sort();
+  }, [workzoneMap]);
+
+  const workzoneToKorlapMap = useMemo(() => {
+    if (!workzoneMap) return {};
+    return Object.fromEntries(
+      workzoneMap.map(item => [item.workzone, item.korlaps || item.korlap_username])
+    );
   }, [workzoneMap]);
 
   const allKeys = useMemo(() => ALL_POSSIBLE_KEYS, []);
@@ -126,14 +131,14 @@ const LihatWO = () => {
   const {
     statusOptions, witelOptions, sektorOptions, workzoneFilterOptions, korlapFilterOptions, allWorkzoneOptions
   } = useMemo(() => {
-    const allSektors = [...new Set(workzoneMap.map((item) => item.sektor))].sort();
-    const allWorkzones = [...new Set(workzoneMap.map((item) => item.workzone))].sort();
+    const allSektors = [...new Set(workzoneMap.map((item) => item.sektor).filter(Boolean))].sort();
+    const allWorkzones = [...new Set(workzoneMap.map((item) => item.workzone).filter(Boolean))].sort();
     const availableWorkzones = filter.sektor ? getWorkzonesForSektor(filter.sektor) : allWorkzones;
     
-    const allKorlaps = [...new Set(workzoneMap.map(item => item.korlaps || item.korlap).filter(Boolean))].sort();
+    const allKorlaps = [...new Set(workzoneMap.flatMap(item => getKorlapsForWorkzone(item.workzone)))].sort();
     
     const availableKorlaps = filter.workzone 
-      ? (workzoneToKorlapMap[filter.workzone] ? [workzoneToKorlapMap[filter.workzone]] : [])
+      ? getKorlapsForWorkzone(filter.workzone)
       : allKorlaps;
 
     return {
@@ -144,7 +149,7 @@ const LihatWO = () => {
       korlapFilterOptions: availableKorlaps,
       allWorkzoneOptions: allWorkzones.map(wz => ({ label: wz, value: wz })),
     };
-  }, [woData, filter, workzoneMap, getWorkzonesForSektor, workzoneToKorlapMap]);
+  }, [woData, filter, workzoneMap, getWorkzonesForSektor, getKorlapsForWorkzone]);
 
   const sortedData = useMemo(() => {
     const filtered = woData.filter((item) => {
@@ -181,11 +186,12 @@ const LihatWO = () => {
       const newFilter = { ...prev, [field]: value };
       if (field === "sektor") { newFilter.workzone = ""; newFilter.korlap = ""; }
       if (field === "workzone") {
-        newFilter.korlap = workzoneToKorlapMap[value] || "";
+        const korlaps = getKorlapsForWorkzone(value);
+        newFilter.korlap = korlaps.length === 1 ? korlaps[0] : "";
       }
       return newFilter;
     });
-  }, [workzoneToKorlapMap]);
+  }, [getKorlapsForWorkzone]);
 
   const handleUpdateRow = useCallback(async (originalItem, updatedFields) => {
     const incidentId = originalItem.incident;
@@ -193,11 +199,10 @@ const LihatWO = () => {
 
     if ('workzone' in updatedFields) {
       const newWorkzone = updatedFields.workzone;
-      const newSektor = getSektorForWorkzone(newWorkzone);
-      const newKorlap = workzoneToKorlapMap[newWorkzone] || null;
+      const match = workzoneMap.find(m => m.workzone === newWorkzone);
       
-      dataToSend.sektor = newSektor;
-      dataToSend.korlap = newKorlap;
+      dataToSend.sektor = match ? match.sektor : "";
+      dataToSend.korlap = match ? (match.korlaps || match.korlap_username || null) : null;
     }
     
     setUpdatingStatus((p) => ({ ...p, [incidentId]: true }));
@@ -213,36 +218,23 @@ const LihatWO = () => {
         const errorData = await response.json().catch(() => ({ message: "Gagal menyimpan, respons server tidak valid" }));
         throw new Error(errorData.message || "Gagal menyimpan data");
       }
-
       const result = await response.json();
-      
       setWoData((prev) => 
         prev.map((d) => (d.incident === incidentId ? result.data : d))
       );
-
     } catch (error) {
       console.error("Gagal update data:", error);
       alert(`Terjadi kesalahan saat memperbarui data: ${error.message}.`);
     } finally {
       setUpdatingStatus((p) => ({ ...p, [incidentId]: false }));
     }
-  }, [getSektorForWorkzone, workzoneToKorlapMap]);
+  }, [workzoneMap]);
   
   const handleEditSave = useCallback(async (updatedItem) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/work-orders/${editItem.incident}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedItem),
-      });
-      const result = await response.json();
-      if (!result.success) throw new Error(result.message || "Gagal menyimpan");
-      setWoData((prev) => prev.map((d) => (d.incident === editItem.incident ? result.data : d)));
-      setEditItem(null);
-    } catch (error) {
-      alert("Gagal update data: " + error.message);
-    }
-  }, [editItem]);
+    // Panggil handleUpdateRow agar logika sinkronisasi terpusat
+    await handleUpdateRow(editItem, updatedItem);
+    setEditItem(null); // Tutup modal setelah menyimpan
+  }, [editItem, handleUpdateRow]);
 
   const handleDelete = async (incident) => {
     if (window.confirm("Yakin ingin menghapus data ini?")) {
@@ -524,6 +516,7 @@ const LihatWO = () => {
           allSektorOptions={sektorOptions}
           getSektorForWorkzone={getSektorForWorkzone}
           getWorkzonesForSektor={getWorkzonesForSektor}
+          getKorlapsForWorkzone={getKorlapsForWorkzone}
         />
       )}
     </div>

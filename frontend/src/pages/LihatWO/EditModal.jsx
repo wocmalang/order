@@ -21,9 +21,9 @@ export const EditModal = ({
             let newState = { ...prev, [name]: value };
 
             if (name === "workzone") {
-                const newSektor = getSektorForWorkzone(value);
-                newState.sektor = newSektor;
-                newState.korlap = "";
+                const korlaps = getKorlapsForWorkzone(value);
+                newState.sektor = getSektorForWorkzone(value);
+                newState.korlap = korlaps.length === 1 ? korlaps[0] : "";
             }
 
             if (name === "sektor") {
@@ -34,7 +34,6 @@ export const EditModal = ({
             return newState;
         });
     };
-
 
     const handleSubmit = (e) => {
         e.preventDefault();
