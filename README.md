@@ -1,5 +1,3 @@
-Tentu, berikut adalah draf README.md yang lebih teknis dan ditujukan untuk pengembang selanjutnya, sesuai dengan analisis kode yang ada.
-
 Work Order Management System
 1. Ikhtisar Proyek
 Aplikasi ini adalah sistem manajemen Work Order (WO) atau insiden berbasis web. Aplikasi ini memungkinkan pengguna untuk melakukan input data insiden secara massal, mengelola tiket yang aktif, dan melihat laporan dari tiket yang sudah selesai.
