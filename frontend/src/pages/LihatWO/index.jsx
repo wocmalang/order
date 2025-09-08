@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import "./LihatWO.css";
 import { useDebounce } from "../../hooks/useDebounce";
-import { getFormatText, getInitialVisibleKeys } from "../../utils/woUtils";
+import { getInitialVisibleKeys } from "../../utils/woUtils";
 import { WorkOrderRow } from "./WorkOrderRow";
 import { EditModal } from "./EditModal";
 import SortIcon from "../../components/SortIcon";
@@ -30,6 +30,24 @@ const ALL_POSSIBLE_KEYS = [
 ];
 
 const ALL_STATUS_OPTIONS = ["OPEN", "BACKEND", "CLOSED"];
+
+const getFormatText = (item) => {
+    let format = `*INCIDENT*
+- TICKET ID: ${item.incident || ""}
+- SERVICE ID: ${item.service_id || ""}
+- CUSTOMER: ${item.customer_name || ""}
+- CP: ${item.contact_name || ""} (${item.contact_phone || ""})
+- PROBLEM: ${item.summary || ""}
+- WITEL: ${item.witel || ""}
+- SEKTOR: ${item.sektor || ""}
+- WORKZONE: ${item.workzone || ""}`;
+
+    if (["HVC_PLATINUM", "HV_DIAMOND"].includes(item.customer_type)) {
+        format += `
+- KORLAP: ${item.korlap || ""}`;
+    }
+    return format;
+};
 
 const LihatWO = () => {
   const [woData, setWoData] = useState([]);
@@ -82,23 +100,19 @@ const LihatWO = () => {
     const match = workzoneMap.find((m) => m.workzone === workzone);
     return match ? match.sektor : "";
   }, [workzoneMap]);
-  
-  const getKorlapsForWorkzone = useCallback((workzone) => {
-    if (!workzone) return [];
-    const match = workzoneMap.find((m) => m.workzone === workzone);
-    return match ? (match.korlaps || "").split(',').map(k => k.trim()) : [];
+
+  // --- PERBAIKAN KUNCI ADA DI SINI ---
+  // Membuat pemetaan yang lebih aman, bisa menerima `korlaps` atau `korlap` dari API
+  const workzoneToKorlapMap = useMemo(() => {
+    if (!workzoneMap) return {};
+    return Object.fromEntries(
+      workzoneMap.map(item => [item.workzone, item.korlaps || item.korlap])
+    );
   }, [workzoneMap]);
 
   const getWorkzonesForSektor = useCallback((sektor) => {
     if (!sektor) return [];
     return workzoneMap.filter((m) => m.sektor === sektor).map((m) => m.workzone).sort();
-  }, [workzoneMap]);
-
-  const workzoneToKorlapMap = useMemo(() => {
-    if (!workzoneMap) return {};
-    return Object.fromEntries(
-      workzoneMap.map(item => [item.workzone, item.korlaps])
-    );
   }, [workzoneMap]);
 
   const allKeys = useMemo(() => ALL_POSSIBLE_KEYS, []);
@@ -116,8 +130,7 @@ const LihatWO = () => {
     const allWorkzones = [...new Set(workzoneMap.map((item) => item.workzone))].sort();
     const availableWorkzones = filter.sektor ? getWorkzonesForSektor(filter.sektor) : allWorkzones;
     
-    // Menggunakan Set untuk memastikan keunikan string korlap
-    const allKorlaps = [...new Set(workzoneMap.map(item => item.korlaps).filter(Boolean))].sort();
+    const allKorlaps = [...new Set(workzoneMap.map(item => item.korlaps || item.korlap).filter(Boolean))].sort();
     
     const availableKorlaps = filter.workzone 
       ? (workzoneToKorlapMap[filter.workzone] ? [workzoneToKorlapMap[filter.workzone]] : [])
@@ -131,7 +144,7 @@ const LihatWO = () => {
       korlapFilterOptions: availableKorlaps,
       allWorkzoneOptions: allWorkzones.map(wz => ({ label: wz, value: wz })),
     };
-  }, [woData, filter.sektor, filter.workzone, workzoneMap, getWorkzonesForSektor, workzoneToKorlapMap]);
+  }, [woData, filter, workzoneMap, getWorkzonesForSektor, workzoneToKorlapMap]);
 
   const sortedData = useMemo(() => {
     const filtered = woData.filter((item) => {
@@ -167,49 +180,53 @@ const LihatWO = () => {
     setFilter((prev) => {
       const newFilter = { ...prev, [field]: value };
       if (field === "sektor") { newFilter.workzone = ""; newFilter.korlap = ""; }
-      if (field === "workzone") { newFilter.korlap = ""; }
+      if (field === "workzone") {
+        newFilter.korlap = workzoneToKorlapMap[value] || "";
+      }
       return newFilter;
     });
-  }, []);
+  }, [workzoneToKorlapMap]);
 
-  const handleUpdateRow = async (originalItem, updatedFields) => {
+  const handleUpdateRow = useCallback(async (originalItem, updatedFields) => {
     const incidentId = originalItem.incident;
-    let finalUpdatedFields = { ...updatedFields };
+    let dataToSend = { ...originalItem, ...updatedFields };
 
     if ('workzone' in updatedFields) {
       const newWorkzone = updatedFields.workzone;
       const newSektor = getSektorForWorkzone(newWorkzone);
-      finalUpdatedFields.sektor = newSektor;
-      finalUpdatedFields.korlap = workzoneToKorlapMap[newWorkzone] || null;
+      const newKorlap = workzoneToKorlapMap[newWorkzone] || null;
+      
+      dataToSend.sektor = newSektor;
+      dataToSend.korlap = newKorlap;
     }
-
-    const optimisticData = { ...originalItem, ...finalUpdatedFields };
+    
     setUpdatingStatus((p) => ({ ...p, [incidentId]: true }));
-    setWoData((prev) => prev.map((d) => (d.incident === incidentId ? optimisticData : d)));
 
     try {
       const response = await fetch(`${API_BASE_URL}/work-orders/${incidentId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(optimisticData),
+        body: JSON.stringify(dataToSend),
       });
 
       if (!response.ok) {
-        // Coba baca pesan error dari backend jika ada
-        const errorData = await response.json().catch(() => ({ message: "Gagal menyimpan dan membaca error" }));
-        throw new Error(errorData.message || "Gagal menyimpan");
+        const errorData = await response.json().catch(() => ({ message: "Gagal menyimpan, respons server tidak valid" }));
+        throw new Error(errorData.message || "Gagal menyimpan data");
       }
 
       const result = await response.json();
-      setWoData((prev) => prev.map((d) => (d.incident === incidentId ? result.data : d)));
+      
+      setWoData((prev) => 
+        prev.map((d) => (d.incident === incidentId ? result.data : d))
+      );
+
     } catch (error) {
       console.error("Gagal update data:", error);
-      alert(`Gagal memperbarui data: ${error.message}. Mengembalikan ke kondisi semula.`);
-      setWoData((prev) => prev.map((d) => (d.incident === incidentId ? originalItem : d)));
+      alert(`Terjadi kesalahan saat memperbarui data: ${error.message}.`);
     } finally {
       setUpdatingStatus((p) => ({ ...p, [incidentId]: false }));
     }
-  };
+  }, [getSektorForWorkzone, workzoneToKorlapMap]);
   
   const handleEditSave = useCallback(async (updatedItem) => {
     try {
@@ -227,7 +244,6 @@ const LihatWO = () => {
     }
   }, [editItem]);
 
-  // ... Sisa handler lainnya tetap sama (handleDelete, handleCompleteTicket, etc.)
   const handleDelete = async (incident) => {
     if (window.confirm("Yakin ingin menghapus data ini?")) {
       try {
@@ -274,6 +290,68 @@ const LihatWO = () => {
     }
   }, [selectedItems]);
 
+  const handleBulkComplete = useCallback(async () => {
+    if (selectedItems.length === 0) return;
+    if (window.confirm(`Yakin ingin menyelesaikan ${selectedItems.length} tiket terpilih?`)) {
+      const ticketsToComplete = woData.filter(item => selectedItems.includes(item.incident));
+      const invalidTickets = ticketsToComplete.filter(item => !item.sektor);
+
+      if (invalidTickets.length > 0) {
+        alert(`Gagal! ${invalidTickets.length} tiket belum memiliki Sektor. Selesaikan tiket ini satu per satu.`);
+        return;
+      }
+
+      try {
+        const promises = selectedItems.map(id => 
+          fetch(`${API_BASE_URL}/work-orders/${id}/complete`, { method: "POST" })
+        );
+        const results = await Promise.all(promises);
+
+        const failed = results.filter(res => !res.ok);
+        if (failed.length > 0) {
+          throw new Error(`${failed.length} tiket gagal diselesaikan.`);
+        }
+        
+        setWoData(prev => prev.filter(item => !selectedItems.includes(item.incident)));
+        setSelectedItems([]);
+        alert(`${selectedItems.length} tiket berhasil diselesaikan.`);
+
+      } catch (err) {
+        alert(`Terjadi kesalahan saat menyelesaikan tiket secara massal: ${err.message}`);
+      }
+    }
+  }, [selectedItems, woData]);
+
+  const handleRemoveDuplicates = useCallback(() => {
+    if (window.confirm("Yakin ingin menghapus data duplikat berdasarkan Ticket ID Gamas?")) {
+      const seen = new Set();
+      const duplicates = [];
+      const uniqueData = [];
+
+      [...woData].reverse().forEach(item => {
+        if (item.ticket_id_gamas && seen.has(item.ticket_id_gamas)) {
+          duplicates.push(item.incident);
+        } else {
+          if (item.ticket_id_gamas) {
+            seen.add(item.ticket_id_gamas);
+          }
+          uniqueData.unshift(item); 
+        }
+      });
+      
+      if (duplicates.length > 0) {
+        Promise.all(duplicates.map(id => fetch(`${API_BASE_URL}/work-orders/${id}`, { method: "DELETE" })))
+          .then(() => {
+            setWoData(uniqueData);
+            alert(`${duplicates.length} data duplikat telah dihapus.`);
+          })
+          .catch(() => alert("Gagal menghapus beberapa item duplikat."));
+      } else {
+        alert("Tidak ditemukan data duplikat.");
+      }
+    }
+  }, [woData]);
+
   const handleCopy = useCallback(async (item) => {
     try {
       await navigator.clipboard.writeText(getFormatText(item));
@@ -316,6 +394,14 @@ const LihatWO = () => {
     setShowColumnSelector(false);
   };
   
+  const handleSelectAllColumns = (checked) => {
+    if (checked) {
+      setDraftVisibleKeys(new Set(allKeys));
+    } else {
+      setDraftVisibleKeys(new Set());
+    }
+  };
+
   if (isLoading) return <div className="loading-container"><div className="loading-spinner"></div> <p>Memuat data...</p></div>;
   if (error) return <div className="lihat-wo-container"><div className="error-container"><h2>Gagal Memuat Data</h2><p>Terjadi kesalahan saat mengambil data dari server.</p><pre className="error-message">{error}</pre><p><strong>Pastikan server backend Anda berjalan</strong> dan alamat API sudah benar.</p></div></div>;
 
@@ -335,7 +421,6 @@ const LihatWO = () => {
               <div className="filter-item"><label>Workzone</label><select value={filter.workzone} onChange={(e) => handleFilterChange("workzone", e.target.value)}><option value="">Semua Workzone</option>{workzoneFilterOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}</select></div>
               <div className="filter-item"><label>Korlap</label><select value={filter.korlap} onChange={(e) => handleFilterChange("korlap", e.target.value)}><option value="">Semua Korlap</option>
   
-  {/* --- THIS IS THE LINE TO CHANGE --- */}
   {korlapFilterOptions.map((opt, index) => (
     <option key={`${opt}-${index}`} value={opt}>{opt}</option>
   ))}
@@ -345,13 +430,26 @@ const LihatWO = () => {
         </div>
         <div className="action-section">
           <button onClick={() => { setDraftVisibleKeys(new Set(visibleKeys)); setShowColumnSelector(true); }} className="btn btn-outline">Atur Kolom</button>
+          <button onClick={handleBulkComplete} className="btn btn-success" disabled={selectedItems.length === 0}>Selesaikan ({selectedItems.length})</button>
           <button onClick={handleBulkDelete} className="btn btn-danger" disabled={selectedItems.length === 0}>Hapus ({selectedItems.length})</button>
+          <button onClick={handleRemoveDuplicates} className="btn btn-warning">Hapus Duplikat</button>
         </div>
       </div>
 
       {showColumnSelector && (
         <div className="column-selector">
-          <h4>Tampilkan Kolom:</h4>
+          <div className="column-selector-header">
+              <h4>Tampilkan Kolom:</h4>
+              <div className="column-item">
+                  <input 
+                      type="checkbox" 
+                      id="select-all-cols"
+                      checked={draftVisibleKeys.size === allKeys.length}
+                      onChange={(e) => handleSelectAllColumns(e.target.checked)}
+                  />
+                  <label htmlFor="select-all-cols"><b>Pilih Semua Kolom</b></label>
+              </div>
+          </div>
           <div className="column-selector-grid">{allKeys.map((key) => (<div key={key} className="column-item"><input type="checkbox" id={`col-${key}`} checked={draftVisibleKeys.has(key)} onChange={() => setDraftVisibleKeys((prev) => { const newSet = new Set(prev); newSet.has(key) ? newSet.delete(key) : newSet.add(key); return newSet; })} /><label htmlFor={`col-${key}`}>{key.replace(/_/g, " ")}</label></div>))}</div>
           <div className="column-selector-actions">
             <button onClick={() => setShowColumnSelector(false)} className="btn btn-outline">Batal</button>
@@ -426,7 +524,6 @@ const LihatWO = () => {
           allSektorOptions={sektorOptions}
           getSektorForWorkzone={getSektorForWorkzone}
           getWorkzonesForSektor={getWorkzonesForSektor}
-          getKorlapsForWorkzone={getKorlapsForWorkzone}
         />
       )}
     </div>
