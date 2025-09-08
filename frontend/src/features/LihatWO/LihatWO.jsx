@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import "./LihatWO.css";
 import { useDebounce } from "../../hooks/useDebounce";
 import { getInitialVisibleKeys } from "../../utils/woUtils";
-import { WorkOrderRow } from "./WorkOrderRow";
-import { EditModal } from "./EditModal";
+import { WorkOrderRow } from "./components/WorkOrderRow";
+import { EditModal } from "./components/EditModal";
 import SortIcon from "../../components/SortIcon";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;

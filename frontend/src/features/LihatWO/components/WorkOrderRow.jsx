@@ -1,8 +1,8 @@
 import React, { memo } from "react";
-import CustomDropdown from "../../components/CustomDropdown";
-import ActionDropdown from "../../components/ActionDropdown";
-import { formatReadableDate } from "../../utils/dateFormatter";
-import TTRCalculator from "../../components/TTRCalculator";
+import CustomDropdown from "../../../components/CustomDropdown";
+import ActionDropdown from "../../../components/ActionDropdown";
+import { formatReadableDate } from "../../../utils/dateFormatter";
+import TTRCalculator from "../../../components/TTRCalculator";
 
 const dateColumns = new Set([
   "reported_date", "status_date", "resolve_date", "date_modified", "booking_date", "last_update_worklog",

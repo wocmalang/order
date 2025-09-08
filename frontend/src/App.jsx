@@ -1,9 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./App.css";
 import Layout from "./components/Layout";
-import InputWO from "./pages/InputWO";
-import LihatWO from "./pages/LihatWO/index";
-import Report from "./pages/Report";
+import InputWO from "./features/InputWO/InputWO";
+import LihatWO from "./features/LihatWO/LihatWO";
+import Report from "./features/Report/Report";
 
 function App() {
   return (
