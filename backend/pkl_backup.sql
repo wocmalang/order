@@ -214,4 +214,28 @@ CREATE TABLE `workzone_details` (
 -- Dumping data for table `workzone_details`
 --
 
-INSERT INTO `workzone_details` VALUES (1,'BLB','@nicosuryanata','MLG 1'),(2,'BLB','@hndika','MLG 1'),(3,'BLB','@triyuni75','MLG 1'),(4,'BLB','@Endrasakti','MLG 1'),(5,'KLJ','@rolimartin','MLG 1'),(6,'KLJ','@JackSpaarroww','MLG 1'),(7,'KLJ','@firdausmulia','MLG 1'),(8,'KLJ','@YantiMohadi','MLG 1'),(9,'SGS','@iqbal_albana','MLG 2'),(10,'SGS','@merin97','MLG 2'),(11,'SGS','@RizkyAHermawan','MLG 2'),(12,'SGS','@Choliz87','MLG 2'),(13,'SGS','@agungspoetra','MLG 2'),(14,'PKS','@iqbal_albana','MLG 2'),(15,'PKS','@merin97','MLG 2'),(16,'PKS','@RizkyAHermawan','MLG 2'),(17,'PKS','@Choliz87','MLG 2'),(18,'PKS','@agungspoetra','MLG 2'),(19,'LWG','@iqbal_albana','MLG 2'),(20,'LWG','@merin97','MLG 2'),(21,'LWG','@RizkyAHermawan','MLG 2'),(22,'LWG','@Choliz87','MLG 2'),(23,'LWG','@agungspoetra','MLG 2'),(24,'TMP','@iqbal_albana','MLG 2'),(25,'TMP','@merin97','MLG 2'),(26,'TMP','@RizkyAHermawan','MLG 2'),(27,'TMP','@Choliz87','MLG 2'),(28,'TMP','@agungspoetra','MLG 2'),(29,'SWJ','@iqbal_albana','MLG 2'),(30,'SWJ','@merin97','MLG 2'),(31,'SWJ','@RizkyAHermawan','MLG 2'),(32,'SWJ','@Choliz87','MLG 2'),(33,'SWJ','@agungspoetra','MLG 2'),(34,'BRG','@iqbal_albana','MLG 2'),(35,'BRG','@merin97','MLG 2'),(36,'BRG','@RizkyAHermawan','MLG 2'),(37,'BRG','@Choliz87','MLG 2'),(38,'BRG','@agungspoetra','MLG 2'),(39,'MLG','@huliaihzlq','MLG 3'),(40,'MLG','@Rizkymaulana_06','MLG 3'),(41,'MLG','@Kikuch','MLG 3'),(42,'MLG','@anovitass','MLG 3'),(43,'GDG','@azislutfi','MLG 3'),(44,'GDG','@anindya_putra','MLG 3'),(45,'GDG','@alibassss','MLG 3'),(46,'GDG','@bimalaksana90','MLG 3'),(47,'TUR','@mochammadmulya','MLG 3'),(48,'TUR','@Penjozasmara','MLG 3'),(49,'TUR','@ipunklutfy','MLG 3'),(50,'TUR','@Gotam27','MLG 3'),(51,'GDI','@mochammadmulya','MLG 3'),(52,'GDI','@Penjozasmara','MLG 3'),(53,'GDI','@ipunklutfy','MLG 3'),(54,'GDI','@Gotam27','MLG 3'),(55,'BNR','@mochammadmulya','MLG 3'),(56,'BNR','@Penjozasmara','MLG 3'),(57,'BNR','@ipunklutfy','MLG 3'),(58,'BNR','@Gotam27','MLG 3'),(59,'DPT','@mochammadmulya','MLG 3'),(60,'DPT','@Penjozasmara','MLG 3'),(61,'DPT','@ipunklutfy','MLG 3'),(62,'DPT','@Gotam27','MLG 3'),(63,'SBM','@mochammadmulya','MLG 3'),(64,'SBM','@Penjozasmara','MLG 3'),(65,'SBM','@ipunklutfy','MLG 3'),(66,'SBM','@Gotam27','MLG 3'),(67,'APG','@mochammadmulya','MLG 3'),(68,'APG','@Penjozasmara','MLG 3'),(69,'APG','@ipunklutfy','MLG 3'),(70,'APG','@Gotam27','MLG 3'),(71,'KEP','@azislutfi','MLG 3'),(72,'KEP','@anindya_putra','MLG 3'),(73,'KEP','@alibassss','MLG 3'),(74,'KEP','@bimalaksana90','MLG 3'),(75,'SBP','@azislutfi','MLG 3'),(76,'SBP','@anindya_putra','MLG 3'),(77,'SBP','@alibassss','MLG 3'),(78,'SBP','@bimalaksana90','MLG 3'),(79,'GKW','@azislutfi','MLG 3'),(80,'GKW','@anindya_putra','MLG 3'),(81,'GKW','@alibassss','MLG 3'),(82,'GKW','@bimalaksana90','MLG 3'),(83,'DNO','@azislutfi','MLG 3'),(84,'DNO','@anindya_putra','MLG 3'),(85,'DNO','@alibassss','MLG 3'),(86,'DNO','@bimalaksana90','MLG 3'),(87,'PGK','@azislutfi','MLG 3'),(88,'PGK','@anindya_putra','MLG 3'),(89,'PGK','@alibassss','MLG 3'),(90,'PGK','@bimalaksana90','MLG 3'),(91,'BTU','@arishere','MLG 4'),(92,'BTU','@Flyco','MLG 4'),(93,'BTU','@aanksueb','MLG 4'),(94,'BTU','@diditdwif','MLG 4'),(95,'BTU','@athunk05','MLG 4'),(96,'NTG','@arishere','MLG 4'),(97,'NTG','@Flyco','MLG 4'),(98,'NTG','@aanksueb','MLG 4'),(99,'NTG','@diditdwif','MLG 4'),(100,'NTG','@athunk05','MLG 4'),(101,'KPO','@arishere','MLG 4'),(102,'KPO','@Flyco','MLG 4'),(103,'KPO','@aanksueb','MLG 4'),(104,'KPO','@diditdwif','MLG 4'),(105,'KPO','@athunk05','MLG 4');
+INSERT INTO `workzone_details` VALUES
+(1, 'BLB', '@nicosuryanata, @hndika, @triyuni75, @Endrasakti', 'MLG 1'),
+(2, 'KLJ', '@rolimartin, @JackSpaarroww, @firdausmulia, @YantiMohadi', 'MLG 1'),
+(3, 'SGS', '@iqbal_albana, @merin97, @RizkyAHermawan, @Choliz87, @agungspoetra', 'MLG 2'),
+(4, 'PKS', '@iqbal_albana, @merin97, @RizkyAHermawan, @Choliz87, @agungspoetra', 'MLG 2'),
+(5, 'LWG', '@iqbal_albana, @merin97, @RizkyAHermawan, @Choliz87, @agungspoetra', 'MLG 2'),
+(6, 'TMP', '@iqbal_albana, @merin97, @RizkyAHermawan, @Choliz87, @agungspoetra', 'MLG 2'),
+(7, 'SWJ', '@iqbal_albana, @merin97, @RizkyAHermawan, @Choliz87, @agungspoetra', 'MLG 2'),
+(8, 'BRG', '@iqbal_albana, @merin97, @RizkyAHermawan, @Choliz87, @agungspoetra', 'MLG 2'),
+(9, 'MLG', '@huliaihzlq, @Rizkymaulana_06, @Kikuch, @anovitass', 'MLG 3'),
+(10, 'GDG', '@azislutfi, @anindya_putra, @alibassss, @bimalaksana90', 'MLG 3'),
+(11, 'TUR', '@mochammadmulya, @Penjozasmara, @ipunklutfy, @Gotam27', 'MLG 3'),
+(12, 'GDI', '@mochammadmulya, @Penjozasmara, @ipunklutfy, @Gotam27', 'MLG 3'),
+(13, 'BNR', '@mochammadmulya, @Penjozasmara, @ipunklutfy, @Gotam27', 'MLG 3'),
+(14, 'DPT', '@mochammadmulya, @Penjozasmara, @ipunklutfy, @Gotam27', 'MLG 3'),
+(15, 'SBM', '@mochammadmulya, @Penjozasmara, @ipunklutfy, @Gotam27', 'MLG 3'),
+(16, 'APG', '@mochammadmulya, @Penjozasmara, @ipunklutfy, @Gotam27', 'MLG 3'),
+(17, 'KEP', '@azislutfi, @anindya_putra, @alibassss, @bimalaksana90', 'MLG 3'),
+(18, 'SBP', '@azislutfi, @anindya_putra, @alibassss, @bimalaksana90', 'MLG 3'),
+(19, 'GKW', '@azislutfi, @anindya_putra, @alibassss, @bimalaksana90', 'MLG 3'),
+(20, 'DNO', '@azislutfi, @anindya_putra, @alibassss, @bimalaksana90', 'MLG 3'),
+(21, 'PGK', '@azislutfi, @anindya_putra, @alibassss, @bimalaksana90', 'MLG 3'),
+(22, 'BTU', '@arishere, @Flyco, @aanksueb, @diditdwif, @athunk05', 'MLG 4'),
+(23, 'NTG', '@arishere, @Flyco, @aanksueb, @diditdwif, @athunk05', 'MLG 4'),
+(24, 'KPO', '@arishere, @Flyco, @aanksueb, @diditdwif, @athunk05', 'MLG 4');
