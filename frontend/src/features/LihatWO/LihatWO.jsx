@@ -66,6 +66,9 @@ const LihatWO = () => {
   const [visibleKeys, setVisibleKeys] = useState(new Set());
   const [draftVisibleKeys, setDraftVisibleKeys] = useState(new Set());
   const [showColumnSelector, setShowColumnSelector] = useState(false);
+  
+  // --- PERUBAHAN 1: State untuk search term di modal kolom ---
+  const [columnSearchTerm, setColumnSearchTerm] = useState(""); 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   useEffect(() => {
@@ -231,9 +234,8 @@ const LihatWO = () => {
   }, [workzoneMap]);
   
   const handleEditSave = useCallback(async (updatedItem) => {
-    // Panggil handleUpdateRow agar logika sinkronisasi terpusat
     await handleUpdateRow(editItem, updatedItem);
-    setEditItem(null); // Tutup modal setelah menyimpan
+    setEditItem(null); 
   }, [editItem, handleUpdateRow]);
 
   const handleDelete = async (incident) => {
@@ -393,6 +395,16 @@ const LihatWO = () => {
       setDraftVisibleKeys(new Set());
     }
   };
+  
+  // --- PERUBAHAN 2: Logika untuk memfilter kolom berdasarkan pencarian ---
+  const filteredColumns = useMemo(() => {
+      if (!columnSearchTerm) {
+          return allKeys;
+      }
+      return allKeys.filter(key => 
+          key.toLowerCase().replace(/_/g, " ").includes(columnSearchTerm.toLowerCase())
+      );
+  }, [allKeys, columnSearchTerm]);
 
   if (isLoading) return <div className="loading-container"><div className="loading-spinner"></div> <p>Memuat data...</p></div>;
   if (error) return <div className="lihat-wo-container"><div className="error-container"><h2>Gagal Memuat Data</h2><p>Terjadi kesalahan saat mengambil data dari server.</p><pre className="error-message">{error}</pre><p><strong>Pastikan server backend Anda berjalan</strong> dan alamat API sudah benar.</p></div></div>;
@@ -428,24 +440,50 @@ const LihatWO = () => {
         </div>
       </div>
 
+      {/* --- PERUBAHAN 3: JSX untuk Modal Kolom diperbarui --- */}
       {showColumnSelector && (
-        <div className="column-selector">
-          <div className="column-selector-header">
-              <h4>Tampilkan Kolom:</h4>
-              <div className="column-item">
-                  <input 
-                      type="checkbox" 
-                      id="select-all-cols"
-                      checked={draftVisibleKeys.size === allKeys.length}
-                      onChange={(e) => handleSelectAllColumns(e.target.checked)}
-                  />
-                  <label htmlFor="select-all-cols"><b>Pilih Semua Kolom</b></label>
+        <div className="column-selector-overlay">
+          <div className="column-selector">
+            <div className="column-selector-header">
+              <h4>Tampilkan Kolom</h4>
+              <input 
+                type="text" 
+                placeholder="Cari nama kolom..."
+                className="column-search-input"
+                value={columnSearchTerm}
+                onChange={(e) => setColumnSearchTerm(e.target.value)}
+              />
+              <div className="column-item select-all">
+                <input 
+                  type="checkbox" 
+                  id="select-all-cols"
+                  checked={draftVisibleKeys.size === allKeys.length}
+                  onChange={(e) => handleSelectAllColumns(e.target.checked)}
+                />
+                <label htmlFor="select-all-cols"><b>Pilih Semua</b></label>
               </div>
-          </div>
-          <div className="column-selector-grid">{allKeys.map((key) => (<div key={key} className="column-item"><input type="checkbox" id={`col-${key}`} checked={draftVisibleKeys.has(key)} onChange={() => setDraftVisibleKeys((prev) => { const newSet = new Set(prev); newSet.has(key) ? newSet.delete(key) : newSet.add(key); return newSet; })} /><label htmlFor={`col-${key}`}>{key.replace(/_/g, " ")}</label></div>))}</div>
-          <div className="column-selector-actions">
-            <button onClick={() => setShowColumnSelector(false)} className="btn btn-outline">Batal</button>
-            <button onClick={handleApplyColumnChanges} className="btn btn-primary">Terapkan</button>
+            </div>
+            <div className="column-selector-grid">
+              {filteredColumns.map((key) => (
+                <div key={key} className="column-item">
+                  <input 
+                    type="checkbox" 
+                    id={`col-${key}`} 
+                    checked={draftVisibleKeys.has(key)} 
+                    onChange={() => setDraftVisibleKeys((prev) => { 
+                      const newSet = new Set(prev); 
+                      newSet.has(key) ? newSet.delete(key) : newSet.add(key); 
+                      return newSet; 
+                    })} 
+                  />
+                  <label htmlFor={`col-${key}`}>{key.replace(/_/g, " ")}</label>
+                </div>
+              ))}
+            </div>
+            <div className="column-selector-actions">
+              <button onClick={() => setShowColumnSelector(false)} className="btn btn-outline">Batal</button>
+              <button onClick={handleApplyColumnChanges} className="btn btn-primary">Terapkan</button>
+            </div>
           </div>
         </div>
       )}

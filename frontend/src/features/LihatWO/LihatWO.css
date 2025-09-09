@@ -292,11 +292,10 @@
   font-weight: 600;
 }
 
-
 /* ==========================================================================
-   7. Modal & Form
+   7. Modal & Form (TERMASUK MODAL KOLOM BARU)
    ========================================================================== */
-.format-modal {
+.format-modal, .column-selector-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
@@ -304,6 +303,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 1rem;
 }
 
 .format-modal-content {
@@ -320,6 +320,98 @@
   margin-top: 0;
   margin-bottom: 1.5rem;
   color: var(--telkom-red);
+}
+
+.column-selector {
+  background: var(--background-card);
+  border-radius: 16px;
+  padding: 1.5rem;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+.column-selector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+}
+
+.column-selector-header h4 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.column-search-input {
+  flex-grow: 1;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+.column-search-input:focus {
+  outline: none;
+  border-color: var(--telkom-red);
+  box-shadow: 0 0 0 3px rgba(229, 30, 37, 0.15);
+}
+
+.column-item.select-all {
+  flex-shrink: 0;
+}
+
+.column-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+  overflow-y: auto;
+  padding: 0.5rem;
+  flex-grow: 1;
+}
+
+.column-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.column-item:hover {
+  background-color: var(--telkom-grey-light);
+}
+
+.column-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.column-item label {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  text-transform: capitalize;
+  cursor: pointer;
+  user-select: none;
+}
+
+.column-selector-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  margin-top: 1rem;
+  border-top: 1px solid var(--border-color);
 }
 
 .form-group { margin-bottom: 1rem; }
@@ -392,5 +484,8 @@
   .btn { padding: 0.6rem 1rem; font-size: 0.9rem; }
   .pagination button { padding: 0.5rem 0.8rem; }
   .wo-table th, .wo-table td { padding: 0.6rem 0.8rem; }
-  .format-modal-content { padding: 1.5rem; max-width: 95vw; }
+  .format-modal-content, .column-selector { padding: 1.5rem; max-width: 95vw; }
+  .column-selector-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
 }
