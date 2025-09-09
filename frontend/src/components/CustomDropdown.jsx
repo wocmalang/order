@@ -13,8 +13,6 @@ const CustomDropdown = ({
   const dropdownRef = useRef(null);
   const menuRef = useRef(null);
 
-  // PERBAIKAN 1: Cari objek opsi yang lengkap berdasarkan 'value' yang diberikan.
-  // 'value' adalah nilai primitif (misal: "BLB"), 'options' adalah array objek.
   const selectedOption = useMemo(
     () => options.find((opt) => opt.value === value),
     [options, value]
@@ -76,14 +74,12 @@ const CustomDropdown = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  // PERBAIKAN 2: Tampilkan 'label' dari opsi yang dipilih, bukan 'value'-nya.
   const displayValue = selectedOption ? selectedOption.label : placeholder;
 
   return (
     <div className={`custom-dropdown ${disabled ? "disabled" : ""}`} ref={dropdownRef}>
       <button type="button" className="dropdown-toggle" onClick={toggleDropdown} disabled={disabled}>
         {displayValue}
-        <span className="dropdown-arrow">{isOpen ? "🔼" : "🔽"}</span>
       </button>
       {isOpen &&
         menuPosition &&
@@ -98,14 +94,13 @@ const CustomDropdown = ({
               width: `${menuPosition.width}px`,
             }}
           >
-            {/* PERBAIKAN 3: Logika pemetaan (mapping) disesuaikan untuk objek */}
             {options.map((opt) => (
               <div
-                key={opt.value} // Gunakan .value untuk key yang unik
-                className={`dropdown-item ${opt.value === value ? "selected" : ""}`} // Bandingkan dengan .value
-                onClick={() => handleSelect(opt.value)} // Kirim .value saat diklik
+                key={opt.value}
+                className={`dropdown-item ${opt.value === value ? "selected" : ""}`}
+                onClick={() => handleSelect(opt.value)}
               >
-                {opt.label} {/* Tampilkan .label untuk teks */}
+                {opt.label}
               </div>
             ))}
           </div>,
