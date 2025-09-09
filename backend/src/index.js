@@ -57,48 +57,10 @@ router.get("/", () => {
   return jsonResponse({
     status: 'ok',
     message: 'Backend API is running.',
-    version: '1.3.0',
+    version: '1.4.0',
   });
 });
 
-/**
- * ENDPOINT: Melihat semua data Work Order dari database D1.
- * Metode: GET
- * URL: /work-orders
- */
-router.get("/view-d1", async (request, env) => {
-  // Pastikan binding database D1 ada
-  if (!env.DB) {
-    console.error("Database binding 'DB' tidak ditemukan. Pastikan sudah dikonfigurasi di wrangler.toml");
-    return json({
-      success: false,
-      error: "Database connection not configured."
-    }, { status: 500 });
-  }
-
-  try {
-    // Siapkan dan eksekusi query untuk mengambil semua data dari tabel 'work_orders'
-    const stmt = env.DB.prepare("SELECT * FROM data_layanan");
-    const { results } = await stmt.all();
-
-    // Kembalikan data yang ditemukan sebagai response JSON
-    return json({
-      success: true,
-      count: results.length,
-      data: results,
-    });
-
-  } catch (err) {
-    // Tangani jika terjadi error saat query ke database
-    console.error("Gagal mengambil data dari D1:", err);
-
-    return json({
-      success: false,
-      error: "Failed to retrieve data from database.",
-      details: err.message
-    }, { status: 500 });
-  }
-});
 
 /**
  * ENDPOINT: Menerima data alamat dan menyimpan ke tabel 'data_layanan' di D1.
@@ -208,14 +170,10 @@ router.post("/mypost", async (request, env) => {
   let workOrderProcessed = 0;
 
   try {
-    // --- PERBAIKAN DIMULAI DI SINI ---
-
-    // LANGKAH BARU: Ambil peta relasi Workzone ke Sektor DAN Korlap dari database.
     const { results: mapResults } = await env.DB.prepare(
       "SELECT workzone, sektor, korlap_username FROM workzone_details WHERE workzone IS NOT NULL"
     ).all();
     
-    // Buat dua peta terpisah untuk Sektor dan Korlap agar mudah diakses.
     const workzoneToSektorMap = mapResults.reduce((acc, { workzone, sektor }) => {
       if (sektor) acc[workzone] = sektor;
       return acc;
@@ -226,12 +184,10 @@ router.post("/mypost", async (request, env) => {
       return acc;
     }, {});
 
-    // LANGKAH 1: Proses data yang masuk, perkaya dengan data sektor DAN korlap, lalu siapkan untuk disimpan.
     const workOrderStmts = [];
     for (const row of data) {
       if (!row.incident) continue;
 
-      // Logika Otomatisasi: Jika workzone ada, isi atau timpa kolom sektor DAN korlap.
       if (row.workzone) {
         if (workzoneToSektorMap[row.workzone]) {
           row.sektor = workzoneToSektorMap[row.workzone];
@@ -240,8 +196,6 @@ router.post("/mypost", async (request, env) => {
           row.korlap = workzoneToKorlapMap[row.workzone];
         }
       }
-
-      // --- AKHIR DARI PERBAIKAN ---
 
       const validKeys = Object.keys(row).filter(key => columns.includes(key));
       const values = validKeys.map(key => row[key]);
@@ -255,7 +209,6 @@ router.post("/mypost", async (request, env) => {
       await env.DB.batch(workOrderStmts);
     }
 
-    // LANGKAH 2: Ambil alamat dari data_layanan dan sinkronkan ke work_orders.
     const { results: addressesToSync } = await env.DB.prepare(
       "SELECT service_no, alamat FROM data_layanan WHERE service_no IN (SELECT service_no FROM work_orders WHERE alamat IS NULL OR alamat = '') AND alamat IS NOT NULL"
     ).all();
@@ -280,6 +233,7 @@ router.post("/mypost", async (request, env) => {
     return json({ success: false, error: "Gagal memproses data.", details: err.message }, { status: 500 });
   }
 });
+
 
 /**
  * ENDPOINT: Menerima data Work Order dan menyinkronkan alamat.
@@ -363,26 +317,36 @@ router.post("/sync-work-orders", async (request, env) => {
 });
 
 /**
- * ENDPOINT: Melihat semua data Work Order dari database D1.
+ * ENDPOINT: Melihat semua data Work Order dan menandai duplikat.
+ * Duplikat diidentifikasi berdasarkan kombinasi 'service_id' dan tanggal 'reported_date'.
+ * Data yang dianggap "asli" adalah yang paling baru diubah (date_modified).
  * Metode: GET
- * URL: /work-orders
+ * URL: /work-orders atau /view-mysql
  */
 router.get("/view-mysql", async (request, env) => {
-  // Pastikan binding database D1 ada
-  if (!env.DB) {
-    console.error("Database binding 'DB' tidak ditemukan. Pastikan sudah dikonfigurasi di wrangler.toml");
-    return json({
-      success: false,
-      error: "Database connection not configured."
-    }, { status: 500 });
-  }
-
   try {
-    // Siapkan dan eksekusi query untuk mengambil semua data dari tabel 'work_orders'
-    const stmt = env.DB.prepare("SELECT * FROM work_orders");
+    const query = `
+      SELECT
+        *,
+        (CASE
+          WHEN ROW_NUMBER() OVER(
+            PARTITION BY service_id, DATE(reported_date)
+            ORDER BY date_modified DESC
+          ) > 1 THEN 1
+          ELSE 0
+        END) AS is_duplicate
+      FROM
+        work_orders
+      WHERE
+        service_id IS NOT NULL AND service_id != ''
+      ORDER BY
+        incident DESC;
+    `;
+
+    const stmt = env.DB.prepare(query);
+    
     const { results } = await stmt.all();
 
-    // Kembalikan data yang ditemukan sebagai response JSON
     return json({
       success: true,
       count: results.length,
@@ -390,16 +354,16 @@ router.get("/view-mysql", async (request, env) => {
     });
 
   } catch (err) {
-    // Tangani jika terjadi error saat query ke database
     console.error("Gagal mengambil data dari D1:", err);
-
     return json({
       success: false,
-      error: "Failed to retrieve data from database.",
+      error: "Gagal mengambil data dari database.",
       details: err.message
     }, { status: 500 });
   }
 });
+
+
 
 /**
  * ENDPOINT 3 (MODIFIKASI D1): Menerima data Work Order dan menyimpan ke D1 (UPSERT).

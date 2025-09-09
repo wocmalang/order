@@ -13,19 +13,32 @@ const ttrColumns = new Set([
 
 export const WorkOrderRow = memo(
   ({
-    item, allKeys, visibleKeys, isSelected, onSelect, onUpdate,
+    item, isDuplicate, allKeys, visibleKeys, isSelected, onSelect, onUpdate,
     updatingStatus, onEdit, onDelete, onFormat, onCopy, onComplete,
     statusOptions, allWorkzoneOptions,
   }) => {
     
-    // Fungsi ini sekarang hanya memberitahu induk tentang perubahan.
-    // Induk akan menangani logika untuk update 'sektor' dan 'korlap'.
     const handleDropdownChange = (key, value) => {
       onUpdate(item, { [key]: value });
     };
 
+    /**
+     * Fungsi untuk menentukan kelas CSS pada baris.
+     * Menggabungkan kelas 'selected' dan 'duplicate-row' jika kondisi terpenuhi.
+     */
+    const getRowClassName = () => {
+      const classNames = [];
+      if (isSelected) {
+        classNames.push("selected");
+      }
+      if (isDuplicate) {
+        classNames.push("duplicate-row");
+      }
+      return classNames.join(" ");
+    };
+
     return (
-      <tr className={isSelected ? "selected" : ""}>
+      <tr className={getRowClassName()}>
         <td>
           <input type="checkbox" checked={isSelected} onChange={() => onSelect(item.incident)} />
         </td>

@@ -66,9 +66,7 @@ const LihatWO = () => {
   const [visibleKeys, setVisibleKeys] = useState(new Set());
   const [draftVisibleKeys, setDraftVisibleKeys] = useState(new Set());
   const [showColumnSelector, setShowColumnSelector] = useState(false);
-  
-  // --- PERUBAHAN 1: State untuk search term di modal kolom ---
-  const [columnSearchTerm, setColumnSearchTerm] = useState(""); 
+  const [columnSearchTerm, setColumnSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   useEffect(() => {
@@ -114,13 +112,6 @@ const LihatWO = () => {
   const getWorkzonesForSektor = useCallback((sektor) => {
     if (!sektor) return [];
     return workzoneMap.filter((m) => m.sektor === sektor).map((m) => m.workzone).sort();
-  }, [workzoneMap]);
-
-  const workzoneToKorlapMap = useMemo(() => {
-    if (!workzoneMap) return {};
-    return Object.fromEntries(
-      workzoneMap.map(item => [item.workzone, item.korlaps || item.korlap_username])
-    );
   }, [workzoneMap]);
 
   const allKeys = useMemo(() => ALL_POSSIBLE_KEYS, []);
@@ -316,30 +307,28 @@ const LihatWO = () => {
     }
   }, [selectedItems, woData]);
 
+  /**
+   * FUNGSI DIPERBARUI: Menghapus duplikat berdasarkan Service ID dan Customer ID.
+   */
   const handleRemoveDuplicates = useCallback(() => {
-    if (window.confirm("Yakin ingin menghapus data duplikat berdasarkan Ticket ID Gamas?")) {
-      const seen = new Set();
-      const duplicates = [];
-      const uniqueData = [];
+    if (window.confirm("Yakin ingin menghapus data duplikat berdasarkan Service ID dan Customer ID? Data yang terakhir diubah akan dipertahankan.")) {
+      // Cari semua item yang ditandai sebagai duplikat oleh backend (is_duplicate === 1)
+      const duplicates = woData.filter(item => item.is_duplicate === 1);
 
-      [...woData].reverse().forEach(item => {
-        if (item.ticket_id_gamas && seen.has(item.ticket_id_gamas)) {
-          duplicates.push(item.incident);
-        } else {
-          if (item.ticket_id_gamas) {
-            seen.add(item.ticket_id_gamas);
-          }
-          uniqueData.unshift(item); 
-        }
-      });
-      
       if (duplicates.length > 0) {
-        Promise.all(duplicates.map(id => fetch(`${API_BASE_URL}/work-orders/${id}`, { method: "DELETE" })))
-          .then(() => {
-            setWoData(uniqueData);
+        const duplicateIncidents = duplicates.map(d => d.incident);
+
+        Promise.all(duplicateIncidents.map(id => fetch(`${API_BASE_URL}/work-orders/${id}`, { method: "DELETE" })))
+          .then(responses => {
+            const failed = responses.filter(res => !res.ok);
+            if (failed.length > 0) {
+              throw new Error(`${failed.length} data duplikat gagal dihapus.`);
+            }
+            // Filter data di state frontend setelah berhasil dihapus dari DB
+            setWoData(prev => prev.filter(item => !duplicateIncidents.includes(item.incident)));
             alert(`${duplicates.length} data duplikat telah dihapus.`);
           })
-          .catch(() => alert("Gagal menghapus beberapa item duplikat."));
+          .catch(err => alert(`Gagal menghapus item duplikat: ${err.message}`));
       } else {
         alert("Tidak ditemukan data duplikat.");
       }
@@ -396,7 +385,6 @@ const LihatWO = () => {
     }
   };
   
-  // --- PERUBAHAN 2: Logika untuk memfilter kolom berdasarkan pencarian ---
   const filteredColumns = useMemo(() => {
       if (!columnSearchTerm) {
           return allKeys;
@@ -424,10 +412,9 @@ const LihatWO = () => {
               <div className="filter-item"><label>Sektor</label><select value={filter.sektor} onChange={(e) => handleFilterChange("sektor", e.target.value)}><option value="">Semua Sektor</option>{sektorOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}</select></div>
               <div className="filter-item"><label>Workzone</label><select value={filter.workzone} onChange={(e) => handleFilterChange("workzone", e.target.value)}><option value="">Semua Workzone</option>{workzoneFilterOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}</select></div>
               <div className="filter-item"><label>Korlap</label><select value={filter.korlap} onChange={(e) => handleFilterChange("korlap", e.target.value)}><option value="">Semua Korlap</option>
-  
-  {korlapFilterOptions.map((opt, index) => (
-    <option key={`${opt}-${index}`} value={opt}>{opt}</option>
-  ))}
+                {korlapFilterOptions.map((opt, index) => (
+                  <option key={`${opt}-${index}`} value={opt}>{opt}</option>
+                ))}
               </select></div>
             </div>
           </div>
@@ -440,7 +427,6 @@ const LihatWO = () => {
         </div>
       </div>
 
-      {/* --- PERUBAHAN 3: JSX untuk Modal Kolom diperbarui --- */}
       {showColumnSelector && (
         <div className="column-selector-overlay">
           <div className="column-selector">
@@ -505,6 +491,7 @@ const LihatWO = () => {
                 <WorkOrderRow
                   key={item.incident}
                   item={item}
+                  isDuplicate={item.is_duplicate === 1} // Melewatkan prop isDuplicate
                   allKeys={allKeys}
                   visibleKeys={visibleKeys}
                   isSelected={selectedItems.includes(item.incident)}
