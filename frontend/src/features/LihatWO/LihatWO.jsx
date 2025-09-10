@@ -307,30 +307,39 @@ const LihatWO = () => {
     }
   }, [selectedItems, woData]);
 
-  /**
-   * FUNGSI DIPERBARUI: Menghapus duplikat berdasarkan Service ID dan Customer ID.
-   */
   const handleRemoveDuplicates = useCallback(() => {
-    if (window.confirm("Yakin ingin menghapus data duplikat berdasarkan Service ID dan Customer ID? Data yang terakhir diubah akan dipertahankan.")) {
-      // Cari semua item yang ditandai sebagai duplikat oleh backend (is_duplicate === 1)
-      const duplicates = woData.filter(item => item.is_duplicate === 1);
+    if (window.confirm("Yakin ingin menghapus data duplikat (baru) yang data aslinya sudah CLOSED?")) {
+      
+      // 1. Cari semua tiket yang BUKAN duplikat (ini adalah tiket-tiket lama/asli)
+      const originalTickets = woData.filter(item => item.is_duplicate !== 1);
 
-      if (duplicates.length > 0) {
-        const duplicateIncidents = duplicates.map(d => d.incident);
-
-        Promise.all(duplicateIncidents.map(id => fetch(`${API_BASE_URL}/work-orders/${id}`, { method: "DELETE" })))
+      // 2. Cari semua tiket BARU (yang ditandai sebagai duplikat) yang bisa dihapus
+      const incidentsToDelete = woData
+        .filter(item => item.is_duplicate === 1) // Ambil semua data baru (duplikat)
+        .filter(newTicket => {
+          // Cari tiket asli yang cocok
+          const original = originalTickets.find(
+            old => old.service_id === newTicket.service_id && old.customer_id === newTicket.customer_id
+          );
+          // Hanya hapus jika tiket asli ada dan statusnya CLOSED
+          return original && original.status === 'CLOSED';
+        })
+        .map(ticket => ticket.incident); // Ambil ID incident-nya
+      
+      if (incidentsToDelete.length > 0) {
+        // 3. Lakukan proses penghapusan
+        Promise.all(incidentsToDelete.map(id => fetch(`${API_BASE_URL}/work-orders/${id}`, { method: "DELETE" })))
           .then(responses => {
             const failed = responses.filter(res => !res.ok);
             if (failed.length > 0) {
               throw new Error(`${failed.length} data duplikat gagal dihapus.`);
             }
-            // Filter data di state frontend setelah berhasil dihapus dari DB
-            setWoData(prev => prev.filter(item => !duplicateIncidents.includes(item.incident)));
-            alert(`${duplicates.length} data duplikat telah dihapus.`);
+            setWoData(prev => prev.filter(item => !incidentsToDelete.includes(item.incident)));
+            alert(`${incidentsToDelete.length} data duplikat telah dihapus.`);
           })
           .catch(err => alert(`Gagal menghapus item duplikat: ${err.message}`));
       } else {
-        alert("Tidak ditemukan data duplikat.");
+        alert("Tidak ditemukan data duplikat yang bisa dihapus (pastikan data asli/lama sudah berstatus CLOSED).");
       }
     }
   }, [woData]);
@@ -491,7 +500,7 @@ const LihatWO = () => {
                 <WorkOrderRow
                   key={item.incident}
                   item={item}
-                  isDuplicate={item.is_duplicate === 1} // Melewatkan prop isDuplicate
+                  isDuplicate={item.is_duplicate === 1}
                   allKeys={allKeys}
                   visibleKeys={visibleKeys}
                   isSelected={selectedItems.includes(item.incident)}

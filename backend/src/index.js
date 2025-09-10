@@ -25,11 +25,6 @@ const withDB = (request, env) => {
   }
 };
 
-
-// =================================================================================
-// 🗄️ ROUTER INITIALIZATION
-// =================================================================================
-
 const router = Router();
 
 // Menangani pre-flight request untuk CORS
@@ -54,7 +49,7 @@ router.get("/", () => {
   return jsonResponse({
     status: 'ok',
     message: 'Backend API is running.',
-    version: '1.5.2',
+    version: '1.5.10',
   });
 });
 
@@ -317,33 +312,48 @@ router.post("/sync-work-orders", async (request, env) => {
 
 /**
  * ENDPOINT: Melihat semua data Work Order dan menandai duplikat.
- * Duplikat diidentifikasi berdasarkan kombinasi 'service_id' dan tanggal 'reported_date'.
- * Data yang dianggap "asli" adalah yang paling baru diubah (date_modified).
  * Metode: GET
  * URL: /work-orders atau /view-mysql
  */
 router.get("/view-mysql", async (request, env) => {
   try {
     const query = `
+      WITH BaseWO AS (
+        -- Langkah 1: Ekstrak ID insiden dasar (bagian sebelum tanda '-')
+        SELECT
+            *,
+            CASE
+                WHEN INSTR(incident, '-') > 0 THEN SUBSTR(incident, 1, INSTR(incident, '-') - 1)
+                ELSE incident
+            END as base_incident_id
+        FROM
+            work_orders
+      ),
+      RankedWO AS (
+        -- Langkah 2: Hitung jumlah anggota dalam setiap grup insiden dasar
+        SELECT
+            *,
+            COUNT(*) OVER(PARTITION BY base_incident_id) as group_count
+        FROM
+            BaseWO
+      )
+      -- Langkah 3: Tandai semua baris dalam grup yang memiliki lebih dari satu anggota
       SELECT
-        *,
-        (CASE
-          WHEN ROW_NUMBER() OVER(
-            PARTITION BY service_id, DATE(reported_date)
-            ORDER BY date_modified DESC
-          ) > 1 THEN 1
-          ELSE 0
-        END) AS is_duplicate
+          *,
+          (CASE
+              -- Tandai sebagai DUPLIKAT (merah) JIKA:
+              -- 1. Grup insiden memiliki lebih dari satu anggota (group_count > 1)
+              -- 2. DAN statusnya BUKAN 'CLOSED'
+              WHEN group_count > 1 AND status != 'CLOSED' THEN 1
+              ELSE 0
+          END) AS is_duplicate
       FROM
-        work_orders
-      WHERE
-        service_id IS NOT NULL AND service_id != ''
+          RankedWO
       ORDER BY
-        incident DESC;
+          incident DESC;
     `;
 
     const stmt = env.DB.prepare(query);
-    
     const { results } = await stmt.all();
 
     return json({
@@ -361,7 +371,6 @@ router.get("/view-mysql", async (request, env) => {
     }, { status: 500 });
   }
 });
-
 
 
 /**

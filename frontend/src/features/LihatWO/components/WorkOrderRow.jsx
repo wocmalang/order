@@ -22,10 +22,6 @@ export const WorkOrderRow = memo(
       onUpdate(item, { [key]: value });
     };
 
-    /**
-     * Fungsi untuk menentukan kelas CSS pada baris.
-     * Menggabungkan kelas 'selected' dan 'duplicate-row' jika kondisi terpenuhi.
-     */
     const getRowClassName = () => {
       const classNames = [];
       if (isSelected) {

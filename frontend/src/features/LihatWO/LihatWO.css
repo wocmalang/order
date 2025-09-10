@@ -489,3 +489,12 @@
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
 }
+
+.wo-table tbody tr.duplicate-row td {
+  background-color: #ffebee !important; /* Warna merah sangat muda */
+  box-shadow: inset 4px 0 0 #c62828;   /* Garis merah tebal di kiri sebagai penanda */
+}
+
+.wo-table tbody tr.duplicate-row:hover td {
+  background-color: #ffcdd2 !important; /* Warna merah muda lebih gelap saat hover */
+}
