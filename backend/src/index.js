@@ -1,7 +1,4 @@
 import { Router, json } from 'itty-router';
-// =================================================================================
-// 헬 HELPER FUNCTIONS (FUNGSI BANTUAN)
-// =================================================================================
 
 // Helper untuk membuat respons JSON yang konsisten
 const jsonResponse = (data, options = {}) => {
@@ -57,7 +54,7 @@ router.get("/", () => {
   return jsonResponse({
     status: 'ok',
     message: 'Backend API is running.',
-    version: '1.4.0',
+    version: '1.5.2',
   });
 });
 
@@ -200,7 +197,9 @@ router.post("/mypost", async (request, env) => {
       const validKeys = Object.keys(row).filter(key => columns.includes(key));
       const values = validKeys.map(key => row[key]);
 
-      const query = `REPLACE INTO work_orders (${validKeys.join(', ')}) VALUES (${validKeys.map(() => '?').join(', ')});`;
+      // --- PERUBAHAN UTAMA: Kembali menggunakan REPLACE INTO ---
+      const query = `INSERT INTO work_orders (${validKeys.join(', ')}) VALUES (${'?'.repeat(validKeys.length).split('').join(',')});`;
+      
       workOrderStmts.push(env.DB.prepare(query).bind(...values));
       workOrderProcessed++;
     }

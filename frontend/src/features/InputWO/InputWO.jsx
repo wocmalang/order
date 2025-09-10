@@ -20,6 +20,7 @@ const InputWO = () => {
   const [fileName, setFileName] = useState("");
   const [workzoneMap, setWorkzoneMap] = useState({});
   const [isMapLoading, setIsMapLoading] = useState(true);
+  const [existingWoData, setExistingWoData] = useState([]);
 
   const allowedFields = [
     "incident","ttr_customer","summary","reported_date","owner_group","owner","customer_segment","service_type", "witel","workzone","status","status_date","ticket_id_gamas","reported_by","contact_phone","contact_name", "contact_email","booking_date","description_assignment","reported_priority","source_ticket","subsidiary", "external_ticket_id","channel","customer_type","closed_by","closed_reopen_by","customer_id","customer_name", "service_id","service_no","slg","technology","lapul","gaul","onu_rx","pending_reason","date_modified", "incident_domain","region","symptom","hierarchy_path","solution","description_actual_solution","kode_produk", "perangkat","technician","device_name","worklog_summary","last_update_worklog","classification_flag", "realm","related_to_gamas","tsc_result","scc_result","ttr_agent","ttr_mitra","ttr_nasional","ttr_pending", "ttr_region","ttr_witel","ttr_end_to_end","note","guarantee_status","resolve_date","sn_ont","tipe_ont", "manufacture_ont","impacted_site","cause","resolution","notes_eskalasi","rk_information", "external_ticket_tier_3","customer_category","classification_path","territory_near_end", "territory_far_end","urgency","alamat","sektor",
@@ -29,23 +30,35 @@ const InputWO = () => {
   ];
 
   useEffect(() => {
-    const fetchWorkzoneMap = async () => {
+    const fetchInitialData = async () => {
+      setIsMapLoading(true);
       try {
-        const response = await fetch(`${API_BASE_URL}/workzone-map`);
-        if (!response.ok) throw new Error("Gagal mengambil data pemetaan");
-        const data = await response.json();
-        const map = data.reduce((acc, item) => {
+        const [mapResponse, existingDataResponse] = await Promise.all([
+            fetch(`${API_BASE_URL}/workzone-map`),
+            fetch(`${API_BASE_URL}/view-mysql`)
+        ]);
+
+        if (!mapResponse.ok) throw new Error("Gagal mengambil data pemetaan workzone.");
+        const mapData = await mapResponse.json();
+        const map = mapData.reduce((acc, item) => {
           acc[item.workzone] = item.sektor;
           return acc;
         }, {});
         setWorkzoneMap(map);
+
+        if (!existingDataResponse.ok) throw new Error("Gagal mengambil data WO yang ada.");
+        const existingData = await existingDataResponse.json();
+        if (existingData.success && Array.isArray(existingData.data)) {
+            setExistingWoData(existingData.data);
+        }
+
       } catch (error) {
         setMessage(`Error: ${error.message}`);
       } finally {
         setIsMapLoading(false);
       }
     };
-    fetchWorkzoneMap();
+    fetchInitialData();
   }, []);
 
   const isValidDate = (val) => {
@@ -135,37 +148,57 @@ const InputWO = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    let dataToSubmit = [];
+    let dataToProcess = [];
 
     try {
       if (inputType === "upload") {
         if (jsonPreview.length === 0) throw new Error("Upload file terlebih dahulu atau file tidak valid.");
-        dataToSubmit = jsonPreview;
+        dataToProcess = jsonPreview;
       } else if (inputType === "paste-tsv") {
         if (!textData.trim()) throw new Error("Silakan paste data TSV terlebih dahulu.");
         const parsedData = parseTSV(textData, workzoneMap);
         if (parsedData.length === 0) throw new Error("Format data TSV tidak valid atau kosong.");
         setJsonPreview(parsedData);
-        dataToSubmit = parsedData;
+        dataToProcess = parsedData;
       } else if (inputType === "paste-json") {
         if (!textData.trim()) throw new Error("Silakan paste data JSON terlebih dahulu.");
         const jsonData = JSON.parse(textData);
         if (!Array.isArray(jsonData)) throw new Error("Teks JSON harus berupa array of objects.");
         const processed = processData(jsonData, workzoneMap);
         setJsonPreview(processed);
-        dataToSubmit = processed;
+        dataToProcess = processed;
       }
     } catch (error) {
       setMessage("Error: " + error.message);
       return;
     }
 
-    if (dataToSubmit.length === 0) {
+    if (dataToProcess.length === 0) {
       setMessage("Tidak ada data untuk disimpan!");
       return;
     }
 
     setIsLoading(true);
+
+    const existingTicketsMap = new Map();
+    existingWoData.forEach(ticket => {
+      const key = `${ticket.service_id}_${ticket.customer_id}`;
+      if (!existingTicketsMap.has(key)) {
+        existingTicketsMap.set(key, []);
+      }
+      existingTicketsMap.get(key).push(ticket);
+    });
+
+    const dataToSubmit = dataToProcess.map(newTicket => {
+      const key = `${newTicket.service_id}_${newTicket.customer_id}`;
+      if (existingTicketsMap.has(key)) {
+        const duplicatesInDB = existingTicketsMap.get(key);
+        const newIncidentId = `${newTicket.incident}-${duplicatesInDB.length + 1}`;
+        return { ...newTicket, incident: newIncidentId };
+      }
+      return newTicket;
+    });
+
     setMessage(`Mengirim ${dataToSubmit.length} baris data ke server...`);
 
     try {
