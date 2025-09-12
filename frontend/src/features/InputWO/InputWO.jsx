@@ -35,7 +35,7 @@ const InputWO = () => {
       try {
         const [mapResponse, existingDataResponse] = await Promise.all([
             fetch(`${API_BASE_URL}/workzone-map`),
-            fetch(`${API_BASE_URL}/view-mysql`)
+            fetch(`${API_BASE_URL}/view-d1`)
         ]);
 
         if (!mapResponse.ok) throw new Error("Gagal mengambil data pemetaan workzone.");
