@@ -39,17 +39,12 @@ router.options('*', () => new Response(null, {
 // Middleware untuk memeriksa DB di semua rute (kecuali rute dasar)
 router.all('*', withDB);
 
-
-// =================================================================================
-// 🏁 API ENDPOINTS
-// =================================================================================
-
 // Rute dasar untuk cek status API
 router.get("/", () => {
   return jsonResponse({
     status: 'ok',
     message: 'Backend API is running.',
-    version: '1.5.10',
+    version: '1.6.2',
   });
 });
 
@@ -313,13 +308,13 @@ router.post("/sync-work-orders", async (request, env) => {
 /**
  * ENDPOINT: Melihat semua data Work Order dan menandai duplikat.
  * Metode: GET
- * URL: /work-orders atau /view-mysql
+ * URL: /work-orders atau /view-d1
  */
-router.get("/view-mysql", async (request, env) => {
+router.get("/view-d1", async (request, env) => {
   try {
     const query = `
       WITH BaseWO AS (
-        -- Langkah 1: Ekstrak ID insiden dasar (bagian sebelum tanda '-')
+        -- Langkah 1: Ekstrak ID insiden dasar
         SELECT
             *,
             CASE
@@ -330,23 +325,36 @@ router.get("/view-mysql", async (request, env) => {
             work_orders
       ),
       RankedWO AS (
-        -- Langkah 2: Hitung jumlah anggota dalam setiap grup insiden dasar
+        -- Langkah 2: Hitung jumlah anggota dalam setiap grup
         SELECT
             *,
             COUNT(*) OVER(PARTITION BY base_incident_id) as group_count
         FROM
             BaseWO
       )
-      -- Langkah 3: Tandai semua baris dalam grup yang memiliki lebih dari satu anggota
+      -- Langkah 3: Beri penanda hanya pada tiket duplikat yang spesifik
       SELECT
           *,
+          -- Kolom is_duplicate
           (CASE
-              -- Tandai sebagai DUPLIKAT (merah) JIKA:
-              -- 1. Grup insiden memiliki lebih dari satu anggota (group_count > 1)
-              -- 2. DAN statusnya BUKAN 'CLOSED'
-              WHEN group_count > 1 AND status != 'CLOSED' THEN 1
+              -- Tandai sebagai DUPLIKAT (1) JIKA:
+              -- 1. Grup memiliki > 1 anggota
+              -- 2. DAN nama insiden ini MEMILIKI tanda '-'
+              -- 3. DAN statusnya BUKAN 'CLOSED'
+              WHEN group_count > 1 AND INSTR(incident, '-') > 0 AND status != 'CLOSED' THEN 1
               ELSE 0
-          END) AS is_duplicate
+          END) AS is_duplicate,
+
+          -- Kolom ttr_end_to_end untuk pewarnaan
+          (CASE
+              -- Beri nilai -2 JIKA:
+              -- 1. Grup memiliki > 1 anggota
+              -- 2. DAN nama insiden ini MEMILIKI tanda '-'
+              -- 3. DAN statusnya BUKAN 'CLOSED'
+              WHEN group_count > 1 AND INSTR(incident, '-') > 0 AND status != 'CLOSED' THEN -2
+              ELSE NULL
+          END) AS ttr_end_to_end
+
       FROM
           RankedWO
       ORDER BY
@@ -584,7 +592,6 @@ router.put("/work-orders/:incident", async (request, env) => {
   }
 });
 
-
 /**
  * ENDPOINT: Memindahkan WO ke Laporan di D1
  * Metode: POST
@@ -621,8 +628,6 @@ router.post("/work-orders/:incident/complete", async (request, env) => {
     return jsonResponse({ success: false, error: err.message }, { status: 500 });
   }
 });
-
-
 
 /**
  * ENDPOINT: Mengambil data dari tabel Laporan di D1

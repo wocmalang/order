@@ -32,7 +32,7 @@ const ALL_POSSIBLE_KEYS = [
 const ALL_STATUS_OPTIONS = ["OPEN", "BACKEND", "CLOSED"];
 
 const getFormatText = (item) => {
-    let format = `*INCIDENT*
+  let format = `*INCIDENT*
 - TICKET ID: ${item.incident || ""}
 - SERVICE ID: ${item.service_id || ""}
 - CUSTOMER: ${item.customer_name || ""}
@@ -42,11 +42,11 @@ const getFormatText = (item) => {
 - SEKTOR: ${item.sektor || ""}
 - WORKZONE: ${item.workzone || ""}`;
 
-    if (["HVC_PLATINUM", "HV_DIAMOND"].includes(item.customer_type)) {
-        format += `
+  if (["HVC_PLATINUM", "HV_DIAMOND"].includes(item.customer_type)) {
+    format += `
 - KORLAP: ${item.korlap || ""}`;
-    }
-    return format;
+  }
+  return format;
 };
 
 const LihatWO = () => {
@@ -75,7 +75,7 @@ const LihatWO = () => {
       setError(null);
       try {
         const [woResponse, workzoneMapResponse] = await Promise.all([
-          fetch(`${API_BASE_URL}/view-mysql`),
+          fetch(`${API_BASE_URL}/view-d1`),
           fetch(`${API_BASE_URL}/workzone-map`),
         ]);
 
@@ -83,7 +83,7 @@ const LihatWO = () => {
 
         const woResult = await woResponse.json();
         const workzoneMapResult = await workzoneMapResponse.json();
-        
+
         setWoData(Array.isArray(woResult.data) ? woResult.data : []);
         setWorkzoneMap(Array.isArray(workzoneMapResult) ? workzoneMapResult : []);
       } catch (err) {
@@ -128,10 +128,10 @@ const LihatWO = () => {
     const allSektors = [...new Set(workzoneMap.map((item) => item.sektor).filter(Boolean))].sort();
     const allWorkzones = [...new Set(workzoneMap.map((item) => item.workzone).filter(Boolean))].sort();
     const availableWorkzones = filter.sektor ? getWorkzonesForSektor(filter.sektor) : allWorkzones;
-    
+
     const allKorlaps = [...new Set(workzoneMap.flatMap(item => getKorlapsForWorkzone(item.workzone)))].sort();
-    
-    const availableKorlaps = filter.workzone 
+
+    const availableKorlaps = filter.workzone
       ? getKorlapsForWorkzone(filter.workzone)
       : allKorlaps;
 
@@ -194,11 +194,11 @@ const LihatWO = () => {
     if ('workzone' in updatedFields) {
       const newWorkzone = updatedFields.workzone;
       const match = workzoneMap.find(m => m.workzone === newWorkzone);
-      
+
       dataToSend.sektor = match ? match.sektor : "";
       dataToSend.korlap = match ? (match.korlaps || match.korlap_username || null) : null;
     }
-    
+
     setUpdatingStatus((p) => ({ ...p, [incidentId]: true }));
 
     try {
@@ -213,7 +213,7 @@ const LihatWO = () => {
         throw new Error(errorData.message || "Gagal menyimpan data");
       }
       const result = await response.json();
-      setWoData((prev) => 
+      setWoData((prev) =>
         prev.map((d) => (d.incident === incidentId ? result.data : d))
       );
     } catch (error) {
@@ -223,10 +223,10 @@ const LihatWO = () => {
       setUpdatingStatus((p) => ({ ...p, [incidentId]: false }));
     }
   }, [workzoneMap]);
-  
+
   const handleEditSave = useCallback(async (updatedItem) => {
     await handleUpdateRow(editItem, updatedItem);
-    setEditItem(null); 
+    setEditItem(null);
   }, [editItem, handleUpdateRow]);
 
   const handleDelete = async (incident) => {
@@ -263,7 +263,7 @@ const LihatWO = () => {
       }
     }
   }, [woData]);
-  
+
   const handleBulkDelete = useCallback(() => {
     if (selectedItems.length > 0 && window.confirm(`Yakin ingin menghapus ${selectedItems.length} data terpilih?`)) {
       Promise.all(selectedItems.map((id) => fetch(`${API_BASE_URL}/work-orders/${id}`, { method: "DELETE" })))
@@ -287,7 +287,7 @@ const LihatWO = () => {
       }
 
       try {
-        const promises = selectedItems.map(id => 
+        const promises = selectedItems.map(id =>
           fetch(`${API_BASE_URL}/work-orders/${id}/complete`, { method: "POST" })
         );
         const results = await Promise.all(promises);
@@ -296,7 +296,7 @@ const LihatWO = () => {
         if (failed.length > 0) {
           throw new Error(`${failed.length} tiket gagal diselesaikan.`);
         }
-        
+
         setWoData(prev => prev.filter(item => !selectedItems.includes(item.incident)));
         setSelectedItems([]);
         alert(`${selectedItems.length} tiket berhasil diselesaikan.`);
@@ -309,7 +309,7 @@ const LihatWO = () => {
 
   const handleRemoveDuplicates = useCallback(() => {
     if (window.confirm("Yakin ingin menghapus data duplikat (baru) yang data aslinya sudah CLOSED?")) {
-      
+
       // 1. Cari semua tiket yang BUKAN duplikat (ini adalah tiket-tiket lama/asli)
       const originalTickets = woData.filter(item => item.is_duplicate !== 1);
 
@@ -325,7 +325,7 @@ const LihatWO = () => {
           return original && original.status === 'CLOSED';
         })
         .map(ticket => ticket.incident); // Ambil ID incident-nya
-      
+
       if (incidentsToDelete.length > 0) {
         // 3. Lakukan proses penghapusan
         Promise.all(incidentsToDelete.map(id => fetch(`${API_BASE_URL}/work-orders/${id}`, { method: "DELETE" })))
@@ -385,7 +385,7 @@ const LihatWO = () => {
     }
     setShowColumnSelector(false);
   };
-  
+
   const handleSelectAllColumns = (checked) => {
     if (checked) {
       setDraftVisibleKeys(new Set(allKeys));
@@ -393,14 +393,14 @@ const LihatWO = () => {
       setDraftVisibleKeys(new Set());
     }
   };
-  
+
   const filteredColumns = useMemo(() => {
-      if (!columnSearchTerm) {
-          return allKeys;
-      }
-      return allKeys.filter(key => 
-          key.toLowerCase().replace(/_/g, " ").includes(columnSearchTerm.toLowerCase())
-      );
+    if (!columnSearchTerm) {
+      return allKeys;
+    }
+    return allKeys.filter(key =>
+      key.toLowerCase().replace(/_/g, " ").includes(columnSearchTerm.toLowerCase())
+    );
   }, [allKeys, columnSearchTerm]);
 
   if (isLoading) return <div className="loading-container"><div className="loading-spinner"></div> <p>Memuat data...</p></div>;
@@ -411,7 +411,7 @@ const LihatWO = () => {
       <div className="page-header"><h1>Incident Management</h1></div>
       <div className="table-controls">
         <div className="search-and-filters">
-          <input type="text" placeholder="Cari di kolom yang tampil..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="search-input"/>
+          <input type="text" placeholder="Cari di kolom yang tampil..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="search-input" />
           <div className="filter-box">
             <div className="filter-group">
               <div className="filter-item"><label>Status</label><select value={filter.status} onChange={(e) => handleFilterChange("status", e.target.value)}><option value="">Semua Status</option>{statusOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}</select></div>
@@ -441,16 +441,16 @@ const LihatWO = () => {
           <div className="column-selector">
             <div className="column-selector-header">
               <h4>Tampilkan Kolom</h4>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Cari nama kolom..."
                 className="column-search-input"
                 value={columnSearchTerm}
                 onChange={(e) => setColumnSearchTerm(e.target.value)}
               />
               <div className="column-item select-all">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   id="select-all-cols"
                   checked={draftVisibleKeys.size === allKeys.length}
                   onChange={(e) => handleSelectAllColumns(e.target.checked)}
@@ -461,15 +461,15 @@ const LihatWO = () => {
             <div className="column-selector-grid">
               {filteredColumns.map((key) => (
                 <div key={key} className="column-item">
-                  <input 
-                    type="checkbox" 
-                    id={`col-${key}`} 
-                    checked={draftVisibleKeys.has(key)} 
-                    onChange={() => setDraftVisibleKeys((prev) => { 
-                      const newSet = new Set(prev); 
-                      newSet.has(key) ? newSet.delete(key) : newSet.add(key); 
-                      return newSet; 
-                    })} 
+                  <input
+                    type="checkbox"
+                    id={`col-${key}`}
+                    checked={draftVisibleKeys.has(key)}
+                    onChange={() => setDraftVisibleKeys((prev) => {
+                      const newSet = new Set(prev);
+                      newSet.has(key) ? newSet.delete(key) : newSet.add(key);
+                      return newSet;
+                    })}
                   />
                   <label htmlFor={`col-${key}`}>{key.replace(/_/g, " ")}</label>
                 </div>
@@ -489,7 +489,7 @@ const LihatWO = () => {
             <tr>
               <th><input type="checkbox" checked={isAllOnPageSelected} onChange={handleSelectAll} /></th>
               <th>AKSI</th>
-              {allKeys.filter((key) => visibleKeys.has(key)).map((key) => (<th key={key} onClick={() => requestSort(key)}>{key.replace(/_/g, " ").toUpperCase()}<SortIcon direction={sortConfig.key === key ? sortConfig.direction : null}/></th>))}
+              {allKeys.filter((key) => visibleKeys.has(key)).map((key) => (<th key={key} onClick={() => requestSort(key)}>{key.replace(/_/g, " ").toUpperCase()}<SortIcon direction={sortConfig.key === key ? sortConfig.direction : null} /></th>))}
             </tr>
           </thead>
           <tbody>
@@ -497,25 +497,26 @@ const LihatWO = () => {
               <tr><td colSpan={visibleKeys.size + 2} className="no-data">Tidak ada data yang cocok.</td></tr>
             ) : (
               dataToShow.map((item) => (
-                <WorkOrderRow
-                  key={item.incident}
-                  item={item}
-                  isDuplicate={item.is_duplicate === 1}
-                  allKeys={allKeys}
-                  visibleKeys={visibleKeys}
-                  isSelected={selectedItems.includes(item.incident)}
-                  onSelect={handleSelectItem}
-                  onUpdate={handleUpdateRow}
-                  updatingStatus={updatingStatus}
-                  onEdit={setEditItem}
-                  onDelete={handleDelete}
-                  onFormat={setFormatIncident}
-                  onCopy={handleCopy}
-                  onComplete={handleCompleteTicket}
-                  statusOptions={ALL_STATUS_OPTIONS.map(opt => ({ label: opt, value: opt }))}
-                  allWorkzoneOptions={allWorkzoneOptions}
-                />
-              ))
+                  <WorkOrderRow
+                    key={item.incident}
+                    item={item}
+                    isDuplicate={item.ttr_end_to_end === -2}
+                    allKeys={allKeys}
+                    visibleKeys={visibleKeys}
+                    isSelected={selectedItems.includes(item.incident)}
+                    onSelect={handleSelectItem}
+                    onUpdate={handleUpdateRow}
+                    updatingStatus={updatingStatus}
+                    onEdit={setEditItem}
+                    onDelete={handleDelete}
+                    onFormat={setFormatIncident}
+                    onCopy={handleCopy}
+                    onComplete={handleCompleteTicket}
+                    statusOptions={ALL_STATUS_OPTIONS.map(opt => ({ label: opt, value: opt }))}
+                    allWorkzoneOptions={allWorkzoneOptions}
+                  />
+                )
+              )
             )}
           </tbody>
         </table>
