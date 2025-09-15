@@ -1,44 +1,59 @@
 // Lokasi: frontend/src/components/TTRCalculator.jsx
 
 import React, { useState, useEffect } from "react";
+import {
+  parseISO,
+  differenceInDays,
+  differenceInHours,
+  differenceInMinutes,
+} from "date-fns";
 
-// Fungsi helper untuk mem-parsing tanggal (tetap berguna)
-const parseDate = (dateString) => {
-  if (!dateString) return null;
-  if (typeof dateString === "string" && dateString.includes(" ")) {
-    const formattedDate = dateString.replace(" ", "T");
-    return new Date(formattedDate);
+/**
+ * Menghitung durasi secara real-time untuk tiket yang sedang berjalan.
+ * Menggunakan date-fns untuk parsing tanggal yang andal dan akurat.
+ * @param {string} startTime - String tanggal dalam format ISO 8601 (misal: "2023-10-27T10:00:00Z").
+ */
+const calculateLiveDuration = (startTime) => {
+  // Jika tidak ada waktu mulai, kembalikan strip.
+  if (!startTime) return "-";
+
+  // Parse string tanggal ISO menjadi objek Date.
+  // parseISO jauh lebih andal daripada new Date(string).
+  const startDate = parseISO(startTime);
+  const endDate = new Date(); // Waktu saat ini (menggunakan waktu lokal browser).
+
+  // Validasi jika tanggal yang di-parse valid.
+  if (isNaN(startDate.getTime())) {
+    console.error("Format tanggal tidak valid:", startTime);
+    return "-";
   }
-  return new Date(dateString);
-};
 
-// Fungsi kalkulasi real-time HANYA untuk tiket yang sedang berjalan
-const calculateLiveDuration = (start) => {
-  if (!start) return "-";
-  const startDate = parseDate(start);
-  const endDate = new Date(); // Waktu saat ini
+  // Pastikan selisih tidak negatif.
+  if (startDate > endDate) {
+    return "0M";
+  }
 
-  if (isNaN(startDate.getTime())) return "-";
+  // Hitung selisih dalam hari, jam, dan menit.
+  const totalMinutes = differenceInMinutes(endDate, startDate);
 
-  let diff = endDate.getTime() - startDate.getTime();
-  if (diff < 0) diff = 0;
+  const days = Math.floor(totalMinutes / 1440); // 1440 menit dalam sehari
+  const remainingMinutesAfterDays = totalMinutes % 1440;
 
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  diff -= days * (1000 * 60 * 60 * 24);
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  diff -= hours * (1000 * 60 * 60);
-  const minutes = Math.floor(diff / (1000 * 60));
+  const hours = Math.floor(remainingMinutesAfterDays / 60);
+  const minutes = remainingMinutesAfterDays % 60;
 
+  // Bangun string hasil.
   let result = "";
   if (days > 0) result += `${days}H `;
   if (hours > 0) result += `${hours}J `;
-  if (minutes >= 0) result += `${minutes}M`;
+  // Selalu tampilkan menit, bahkan jika 0, untuk kejelasan.
+  result += `${minutes}M`;
 
-  return result.trim() === "" ? "0M" : result.trim();
+  return result.trim();
 };
 
 const TTRCalculator = ({ reportedDate, ttrValue }) => {
-  // State untuk menyimpan durasi live
+  // State untuk menyimpan durasi live.
   const [liveDuration, setLiveDuration] = useState(
     calculateLiveDuration(reportedDate)
   );
@@ -46,23 +61,27 @@ const TTRCalculator = ({ reportedDate, ttrValue }) => {
   useEffect(() => {
     let intervalId = null;
 
-    // Jika TIDAK ada ttrValue (artinya tiket masih open), jalankan timer
+    // Jika TIDAK ada ttrValue (artinya tiket masih open), jalankan timer.
     if (reportedDate && !ttrValue) {
+      // Panggil sekali saat komponen dimuat untuk memastikan nilai awal sudah benar.
+      setLiveDuration(calculateLiveDuration(reportedDate));
+
+      // Atur interval untuk update setiap menit.
       intervalId = setInterval(() => {
         setLiveDuration(calculateLiveDuration(reportedDate));
-      }, 60000); // Update setiap menit
+      }, 60000); // Update setiap 1 menit
     }
 
-    // Fungsi cleanup untuk membersihkan interval
+    // Fungsi cleanup untuk membersihkan interval saat komponen tidak lagi ditampilkan.
     return () => {
       if (intervalId) {
         clearInterval(intervalId);
       }
     };
-  }, [reportedDate, ttrValue]); // Efek dievaluasi ulang jika props berubah
+  }, [reportedDate, ttrValue]); // Efek ini akan dijalankan ulang jika props berubah.
 
   // Logika render:
-  // Jika ada ttrValue dari backend, tampilkan itu.
+  // Jika ada ttrValue dari backend, tampilkan itu (ini adalah nilai final).
   // Jika tidak, tampilkan liveDuration yang dihitung secara real-time.
   return <span>{ttrValue || liveDuration}</span>;
 };

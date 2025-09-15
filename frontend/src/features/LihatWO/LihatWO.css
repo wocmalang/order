@@ -16,7 +16,6 @@
   --primary-accent: #4a90e2; /* Aksen biru untuk highlight */
 }
 
-
 /* ==========================================================================
    2. Layout & Container Utama
    ========================================================================== */
@@ -37,7 +36,6 @@
   font-size: 28px;
   font-weight: 700;
 }
-
 
 /* ==========================================================================
    3. Panel Kontrol (Filter & Aksi)
@@ -143,7 +141,6 @@
   flex-wrap: wrap;
 }
 
-
 /* ==========================================================================
    4. Tombol Aksi
    ========================================================================== */
@@ -170,10 +167,19 @@
   cursor: not-allowed;
 }
 
-.btn-danger { background-color: #dc3545; color: white; }
-.btn-primary { background-color: var(--telkom-red); color: white; }
-.btn-outline { background-color: transparent; border: 1px solid var(--border-color); color: var(--text-secondary); }
-
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+}
+.btn-primary {
+  background-color: var(--telkom-red);
+  color: white;
+}
+.btn-outline {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
 
 /* ==========================================================================
    5. Tabel Data
@@ -285,7 +291,9 @@
   font-size: 0.9rem;
   transition: background-color 0.2s ease;
 }
-.dropdown-item:hover { background-color: #f0f4fe; }
+.dropdown-item:hover {
+  background-color: #f0f4fe;
+}
 .dropdown-item.selected {
   background-color: var(--telkom-red);
   color: var(--telkom-white);
@@ -295,7 +303,8 @@
 /* ==========================================================================
    7. Modal & Form (TERMASUK MODAL KOLOM BARU)
    ========================================================================== */
-.format-modal, .column-selector-overlay {
+.format-modal,
+.column-selector-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
@@ -331,7 +340,7 @@
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
 .column-selector-header {
@@ -414,7 +423,9 @@
   border-top: 1px solid var(--border-color);
 }
 
-.form-group { margin-bottom: 1rem; }
+.form-group {
+  margin-bottom: 1rem;
+}
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
@@ -443,11 +454,11 @@
   gap: 0.75rem;
 }
 
-
 /* ==========================================================================
    8. State Lainnya
    ========================================================================== */
-.loading-container, .error-container {
+.loading-container,
+.error-container {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -466,27 +477,12 @@
   animation: spin 1s linear infinite;
 }
 
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-
-/* ==========================================================================
-   9. Media Queries untuk Responsivitas
-   ========================================================================== */
-@media (max-width: 900px) {
-  .table-controls {
-    flex-direction: column;
-    align-items: stretch;
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
   }
-}
-
-@media (max-width: 768px) {
-  .lihat-wo-container { padding: 1rem; }
-  .btn { padding: 0.6rem 1rem; font-size: 0.9rem; }
-  .pagination button { padding: 0.5rem 0.8rem; }
-  .wo-table th, .wo-table td { padding: 0.6rem 0.8rem; }
-  .format-modal-content, .column-selector { padding: 1.5rem; max-width: 95vw; }
-  .column-selector-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  100% {
+    transform: rotate(360deg);
   }
 }
 
@@ -497,4 +493,94 @@
 
 .wo-table tbody tr.duplicate-row:hover {
   background-color: #ff9999 !important;
+}
+
+/* ==========================================================================
+   9. Pagination (KODE BARU DITAMBAHKAN DI SINI)
+   ========================================================================== */
+.pagination {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  padding: 1rem;
+  background-color: var(--background-card);
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.pagination .page-info {
+  font-size: 0.9em;
+  color: var(--text-secondary);
+}
+
+.pagination button {
+  background-color: var(--telkom-white);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+}
+
+.pagination button:hover:not(:disabled) {
+  background-color: var(--telkom-red);
+  color: var(--telkom-white);
+  border-color: var(--telkom-red);
+}
+
+.pagination button:disabled {
+  background-color: var(--telkom-grey-light);
+  color: var(--telkom-grey-medium);
+  cursor: not-allowed;
+}
+
+.pagination .page-number {
+  margin: 0 12px;
+  font-size: 0.9em;
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   10. Media Queries untuk Responsivitas
+   ========================================================================== */
+@media (max-width: 900px) {
+  .table-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 768px) {
+  .lihat-wo-container {
+    padding: 1rem;
+  }
+  .btn {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+  .pagination button {
+    padding: 0.5rem 0.8rem;
+  }
+  .wo-table th,
+  .wo-table td {
+    padding: 0.6rem 0.8rem;
+  }
+  .format-modal-content,
+  .column-selector {
+    padding: 1.5rem;
+    max-width: 95vw;
+  }
+  .column-selector-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  /* Responsivitas untuk pagination */
+  .pagination {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+  }
 }
