@@ -1,14 +1,15 @@
 import React, { useState } from "react";
-import "./AuthPage.css"; // Pastikan file CSS ini diimpor
+import { useNavigate } from "react-router-dom";
+import "./AuthPage.css";
 
-function AuthPage({ onLoginSuccess }) {
-  // Nilai awal diubah menjadi string kosong
+function AuthPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
+  const navigate = useNavigate();
 
-  const API_URL = "https://order-be.wocmalang.workers.dev/api/login";
+  const API_URL = "https://order-be.gunawanferdian007.workers.dev/login";
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -24,18 +25,22 @@ function AuthPage({ onLoginSuccess }) {
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(
-          data.message || "Gagal untuk login, silakan coba lagi."
-        );
+      if (!data.success) {
+        setMessage(data.message || "Gagal untuk login, silakan coba lagi.");
+        setIsError(true);
+        return;
       }
 
-      setMessage(data.message);
+      setMessage("Login berhasil!");
       setIsError(false);
-      // Jika perlu, aktifkan kembali fungsi di bawah ini setelah login berhasil
-      // setTimeout(() => { onLoginSuccess(); }, 1000);
+
+      // Simpan user ke localStorage
+      sessionStorage.setItem("user", JSON.stringify(data.user));
+
+      // Redirect ke halaman utama
+      navigate("/", { replace: true });
     } catch (error) {
-      setMessage(error.message);
+      setMessage("Terjadi kesalahan koneksi ke server.");
       setIsError(true);
     }
   };
@@ -43,7 +48,6 @@ function AuthPage({ onLoginSuccess }) {
   return (
     <div className="auth-page-container">
       <div className="login-card">
-        {/* Panel Form Login */}
         <div className="form-panel">
           <div className="form-header">
             <h1 className="logo-text">IOC-W</h1>
