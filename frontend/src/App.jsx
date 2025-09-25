@@ -11,11 +11,12 @@ import InputWO from "./features/InputWO/InputWO";
 import LihatWO from "./features/LihatWO/LihatWO";
 import Report from "./features/Report/Report";
 import AuthPage from "./features/Auth/AuthPage";
+import UserManagementPage from "./features/UserManagement/UserManagementPage";
 
 // Komponen ProtectedRoute
 function ProtectedRoute({ children }) {
   const location = useLocation();
-  const user = sessionStorage.getItem("user"); // gunakan sessionStorage
+  const user = sessionStorage.getItem("user");
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
@@ -28,6 +29,10 @@ function App() {
       <Routes>
         {/* Login tanpa Layout */}
         <Route path="/login" element={<AuthPage />} />
+
+        {/* Halaman admin user management - TANPA proteksi */}
+        <Route path="/admin/users" element={<UserManagementPage />} />
+
         {/* Semua halaman lain pakai Layout dan proteksi */}
         <Route
           path="/"
