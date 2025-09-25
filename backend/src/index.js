@@ -1039,6 +1039,80 @@ router.post('/login', async (request, env) => {
 });
 
 /**
+ * ENDPOINT: Ambil semua user
+ * GET /users
+ */
+router.get('/users', async (request, env) => {
+	if (!env.DB) return json({ success: false, error: 'Database not configured' }, { status: 500 });
+	try {
+		const { results } = await env.DB.prepare('SELECT username, role FROM users').all();
+		return json({ success: true, users: results });
+	} catch (err) {
+		return json({ success: false, error: err.message }, { status: 500 });
+	}
+});
+
+/**
+ * ENDPOINT: Tambah user baru
+ * POST /users
+ * Body: { username, password, role }
+ */
+router.post('/users', async (request, env) => {
+	if (!env.DB) return json({ success: false, error: 'Database not configured' }, { status: 500 });
+	try {
+		const { username, password, role } = await request.json();
+		if (!username || !password || !role) {
+			return json({ success: false, message: 'Semua field wajib diisi.' }, { status: 400 });
+		}
+		// Cek duplikat
+		const { results } = await env.DB.prepare('SELECT username FROM users WHERE username = ?').bind(username).all();
+		if (results.length > 0) {
+			return json({ success: false, message: 'Username sudah terdaftar.' }, { status: 409 });
+		}
+		await env.DB.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)').bind(username, password, role).run();
+		return json({ success: true, message: 'User berhasil ditambahkan.' });
+	} catch (err) {
+		return json({ success: false, error: err.message }, { status: 500 });
+	}
+});
+
+/**
+ * ENDPOINT: Hapus user
+ * DELETE /users/:username
+ */
+router.delete('/users/:username', async (request, env) => {
+	if (!env.DB) return json({ success: false, error: 'Database not configured' }, { status: 500 });
+	const { username } = request.params;
+	if (!username) return json({ success: false, message: 'Username wajib diisi.' }, { status: 400 });
+	try {
+		await env.DB.prepare('DELETE FROM users WHERE username = ?').bind(username).run();
+		return json({ success: true, message: 'User berhasil dihapus.' });
+	} catch (err) {
+		return json({ success: false, error: err.message }, { status: 500 });
+	}
+});
+
+/**
+ * ENDPOINT: Ganti kredensial admin
+ * PUT /users/admin
+ * Body: { username, password }
+ */
+router.put('/users/admin', async (request, env) => {
+	if (!env.DB) return json({ success: false, error: 'Database not configured' }, { status: 500 });
+	try {
+		const { username, password } = await request.json();
+		if (!username || !password) {
+			return json({ success: false, message: 'Username dan password wajib diisi.' }, { status: 400 });
+		}
+		// Update user dengan role admin
+		await env.DB.prepare('UPDATE users SET username = ?, password = ? WHERE role = ?').bind(username, password, 'admin').run();
+		return json({ success: true, message: 'Kredensial admin berhasil diubah.' });
+	} catch (err) {
+		return json({ success: false, error: err.message }, { status: 500 });
+	}
+});
+
+/**
  * Fallback untuk menangani semua rute lain yang tidak cocok.
  * Mengembalikan response 404 Not Found.
  */
