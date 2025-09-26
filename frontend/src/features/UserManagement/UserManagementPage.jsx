@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./UserManagementPage.css";
+
 const USER_MANAGE_URL = "https://order-be.gunawanferdian007.workers.dev/users";
 
 function UserManagementPage() {
@@ -10,6 +12,8 @@ function UserManagementPage() {
     role: "user",
   });
   const [msg, setMsg] = useState("");
+
+  const navigate = useNavigate();
 
   const fetchUsers = async () => {
     try {
@@ -23,8 +27,21 @@ function UserManagementPage() {
   };
 
   useEffect(() => {
+    // Cek apakah user adalah admin yang sudah login
+    const userSession = sessionStorage.getItem("user");
+    if (!userSession) {
+      navigate("/login");
+      return;
+    }
+
+    const user = JSON.parse(userSession);
+    if (user.role !== "admin") {
+      navigate("/login");
+      return;
+    }
+
     fetchUsers();
-  }, []);
+  }, [navigate]);
 
   const handleAddUser = async (e) => {
     e.preventDefault();
@@ -66,9 +83,20 @@ function UserManagementPage() {
     }
   };
 
+  const handleLogout = () => {
+    sessionStorage.removeItem("user");
+    navigate("/login");
+  };
+
   return (
     <div className="user-management-container">
-      <h2>Manajemen User</h2>
+      <div className="admin-header">
+        <h2>Manajemen User</h2>
+        <button onClick={handleLogout} className="btn-logout">
+          Logout
+        </button>
+      </div>
+
       <form onSubmit={handleAddUser} className="user-form">
         <div className="form-row">
           <div className="form-group">
@@ -119,6 +147,7 @@ function UserManagementPage() {
           </button>
         </div>
       </form>
+
       <ul className="user-list">
         {users.map((u) => (
           <li key={u.username}>
@@ -134,6 +163,7 @@ function UserManagementPage() {
           </li>
         ))}
       </ul>
+
       {msg && <p className="message">{msg}</p>}
     </div>
   );

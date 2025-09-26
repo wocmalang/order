@@ -13,21 +13,6 @@ function setUser(user) {
   }
 }
 
-function getUser() {
-  if (STORAGE_MODE === "session") {
-    return sessionStorage.getItem("user");
-  }
-  return localStorage.getItem("user");
-}
-
-function removeUser() {
-  if (STORAGE_MODE === "session") {
-    sessionStorage.removeItem("user");
-  } else {
-    localStorage.removeItem("user");
-  }
-}
-
 const API_URL = "https://order-be.gunawanferdian007.workers.dev/login";
 
 function AuthPage() {
@@ -38,7 +23,7 @@ function AuthPage() {
 
   const navigate = useNavigate();
 
-  // Login handler
+  // Login handler untuk user biasa
   const handleLogin = async (e) => {
     e.preventDefault();
     setMessage("");
@@ -70,9 +55,52 @@ function AuthPage() {
     }
   };
 
-  // Admin IOC-W: langsung redirect ke halaman admin user management
-  const handleAdminClick = () => {
-    navigate("/admin/users");
+  // Admin login handler - menggunakan input yang sama tapi validasi admin
+  const handleAdminLogin = async (e) => {
+    e.preventDefault();
+    setMessage("");
+    setIsError(false);
+
+    if (!username || !password) {
+      setMessage("Masukkan username dan password untuk login admin.");
+      setIsError(true);
+      return;
+    }
+
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        setMessage(data.message || "Username atau password salah!");
+        setIsError(true);
+        return;
+      }
+
+      // Cek apakah user adalah admin
+      if (data.user.role !== "admin") {
+        setMessage(
+          "Akses ditolak. Hanya admin yang bisa mengakses halaman ini."
+        );
+        setIsError(true);
+        return;
+      }
+
+      // Jika admin, simpan session dan redirect
+      setMessage("Login admin berhasil!");
+      setIsError(false);
+
+      setUser(JSON.stringify(data.user));
+      navigate("/admin/users", { replace: true });
+    } catch (error) {
+      setMessage("Terjadi kesalahan koneksi ke server.");
+      setIsError(true);
+    }
   };
 
   return (
@@ -85,7 +113,7 @@ function AuthPage() {
             <p>Hello! Please enter your details</p>
           </div>
 
-          <form onSubmit={handleLogin} className="login-form">
+          <form className="login-form">
             <div className="input-group">
               <label htmlFor="username">Username</label>
               <input
@@ -115,13 +143,17 @@ function AuthPage() {
             </div>
 
             <div className="button-group">
-              <button type="submit" className="btn btn-primary">
+              <button
+                type="button"
+                onClick={handleLogin}
+                className="btn btn-primary"
+              >
                 Log in
               </button>
               <button
                 type="button"
+                onClick={handleAdminLogin}
                 className="btn btn-secondary"
-                onClick={handleAdminClick}
               >
                 Admin IOC-W
               </button>

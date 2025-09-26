@@ -25,6 +25,69 @@ body {
   color: #222;
 }
 
+/* Admin Login Form */
+.admin-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.admin-login-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-login-form .btn-full {
+  width: 100%;
+  margin-top: 8px;
+  align-self: stretch;
+}
+
+.auth-error {
+  color: #e94560;
+  text-align: center;
+  margin-top: 12px;
+  font-weight: 600;
+  background: #ffeef0;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ffcdd2;
+}
+
+/* Admin Header */
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.admin-header h2 {
+  margin: 0;
+  margin-bottom: 0;
+}
+
+.btn-logout {
+  background: #6c757d;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 0.95em;
+  font-weight: 600;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 4px #0001;
+}
+
+.btn-logout:hover {
+  background: #5a6268;
+  box-shadow: 0 4px 8px #0002;
+}
+
 .user-form {
   display: flex;
   flex-direction: column;
@@ -198,5 +261,16 @@ body {
     width: 100%;
     min-width: 0;
     margin-top: 0;
+  }
+  .admin-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+  }
+  .admin-header h2 {
+    margin-bottom: 0;
+  }
+  .admin-login-form {
+    max-width: 100%;
   }
 }
