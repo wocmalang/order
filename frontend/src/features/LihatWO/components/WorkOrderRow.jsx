@@ -5,19 +5,39 @@ import { formatReadableDate } from "../../../utils/dateFormatter";
 import TTRCalculator from "../../../components/TTRCalculator";
 
 const dateColumns = new Set([
-  "reported_date", "status_date", "resolve_date", "date_modified", "booking_date", "last_update_worklog",
+  "reported_date",
+  "status_date",
+  "resolve_date",
+  "date_modified",
+  "booking_date",
+  "last_update_worklog",
 ]);
 const ttrColumns = new Set([
-  "ttr_customer", "ttr_agent", "ttr_mitra", "ttr_nasional", "ttr_end_to_end",
+  "ttr_customer",
+  "ttr_agent",
+  "ttr_mitra",
+  "ttr_nasional",
+  "ttr_end_to_end",
 ]);
 
 export const WorkOrderRow = memo(
   ({
-    item, isDuplicate, allKeys, visibleKeys, isSelected, onSelect, onUpdate,
-    updatingStatus, onEdit, onDelete, onFormat, onCopy, onComplete,
-    statusOptions, allWorkzoneOptions,
+    item,
+    isDuplicate,
+    allKeys,
+    visibleKeys,
+    isSelected,
+    onSelect,
+    onUpdate,
+    updatingStatus,
+    onEdit,
+    onDelete,
+    onFormat,
+    onCopy,
+    onComplete,
+    statusOptions,
+    allWorkzoneOptions,
   }) => {
-    
     const handleDropdownChange = (key, value) => {
       onUpdate(item, { [key]: value });
     };
@@ -36,12 +56,20 @@ export const WorkOrderRow = memo(
     return (
       <tr className={getRowClassName()}>
         <td>
-          <input type="checkbox" checked={isSelected} onChange={() => onSelect(item.incident)} />
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onSelect(item.incident)}
+          />
         </td>
         <td className="aksi-cell">
           <ActionDropdown
-            item={item} onFormat={onFormat} onCopy={onCopy}
-            onEdit={onEdit} onDelete={onDelete} onComplete={onComplete}
+            item={item}
+            onFormat={onFormat}
+            onCopy={onCopy}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onComplete={onComplete}
           />
         </td>
         {allKeys
@@ -50,35 +78,72 @@ export const WorkOrderRow = memo(
             const isUpdating = updatingStatus[item.incident];
 
             if (ttrColumns.has(key)) {
-              return ( <td key={key} className="data-cell"><TTRCalculator reportedDate={item.reported_date} ttrValue={item[key]} /></td> );
+              return (
+                <td key={key} className="data-cell">
+                  <TTRCalculator
+                    reportedDate={item.reported_date}
+                    ttrValue={item[key]}
+                  />
+                </td>
+              );
             }
             if (key === "status") {
               return (
                 <td key={key} className="interactive-cell">
-                  <CustomDropdown options={statusOptions} value={item.status} onChange={(v) => handleDropdownChange("status", v)} disabled={isUpdating} placeholder="- Pilih Status -" />
+                  <CustomDropdown
+                    options={statusOptions}
+                    value={item.status}
+                    onChange={(v) => handleDropdownChange("status", v)}
+                    disabled={isUpdating}
+                    placeholder="- Pilih Status -"
+                  />
                   {isUpdating && "⏳"}
                 </td>
               );
             }
             if (key === "sektor") {
               const cellValue = String(item[key] ?? "");
-              return ( <td key={key} className="data-cell" title={cellValue}>{cellValue}</td> );
-            }
-            if (key === "workzone") {
               return (
-                <td key={key} className="interactive-cell">
-                  <CustomDropdown options={allWorkzoneOptions} value={item.workzone} onChange={(v) => handleDropdownChange("workzone", v)} disabled={isUpdating} placeholder="- Pilih Workzone -" />
-                  {isUpdating && "⏳"}
+                <td key={key} className="data-cell" title={cellValue}>
+                  {cellValue}
+                </td>
+              );
+            }
+            // Hapus workzone dropdown, jadikan data cell biasa
+            if (key === "workzone") {
+              const cellValue = String(item[key] ?? "");
+              return (
+                <td key={key} className="data-cell" title={cellValue}>
+                  {cellValue}
                 </td>
               );
             }
             if (key === "korlap") {
               const cellValue = String(item[key] ?? "");
-              return ( <td key={key} className="data-cell truncate" title={cellValue}>{cellValue}</td> );
+              return (
+                <td key={key} className="data-cell truncate" title={cellValue}>
+                  {cellValue}
+                </td>
+              );
+            }
+            // Tambahkan handling untuk alamat
+            if (key === "alamat") {
+              const cellValue = String(item[key] ?? "");
+              return (
+                <td key={key} className="data-cell truncate" title={cellValue}>
+                  {cellValue}
+                </td>
+              );
             }
 
-            const cellValue = dateColumns.has(key) ? formatReadableDate(item[key]) : String(item[key] ?? "");
-            return ( <td key={key} className="data-cell truncate" title={cellValue}>{cellValue}</td> );
+            const cellValue = dateColumns.has(key)
+              ? formatReadableDate(item[key])
+              : String(item[key] ?? "");
+            return (
+              <td key={key} className="data-cell truncate" title={cellValue}>
+                {cellValue}
+              </td>
+            );
           })}
       </tr>
     );
