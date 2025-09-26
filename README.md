@@ -4,15 +4,14 @@
 
 This application is a web-based Work Order (WO) or incident management system. It enables users to perform bulk data entry for incidents, manage active tickets, and view reports for completed tickets.
 
-The system's primary focus is on automating business processes, such as calculating Time to Resolution (TTR) and systematically archiving tickets. Based on the existing codebase, this system primarily utilizes an **Express.js backend** with a **MySQL database**.
+The system's primary focus is on automating business processes, such as calculating Time to Resolution (TTR) and systematically archiving tickets. This system utilizes a **React** frontend and a serverless backend powered by **Cloudflare Workers** with a **Cloudflare D1** database.
 
 ## 2. Project Structure
 
-The repository is organized into several key directories:
+The repository is organized into two key directories:
 
 -   `📁 /frontend`: The user interface (UI) application built with **React** and **Vite**. All visual components and user interactions are located here.
--   `📁 /express`: The main backend of the application, built with **Express.js**. This directory contains all server-side logic, the connection to the MySQL database, and the API endpoints.
--   `📁 /backend`: An alternative backend designed for the **Cloudflare Workers** serverless platform with a D1 database. The currently active backend is the one in the `/express` directory.
+-   `📁 /backend`: The serverless backend application designed for the **Cloudflare Workers** platform. This directory contains all server-side logic, database connections, and API endpoints.
 
 ## 3. Tech Stack
 
@@ -23,40 +22,41 @@ The repository is organized into several key directories:
 -   **Charting**: Chart.js
 -   **Data Export**: `xlsx` for Excel, `jspdf` & `jspdf-autotable` for PDF
 
-### Backend (Express)
--   **Framework**: Express.js
--   **Database**: MySQL
--   **MySQL Driver**: `mysql2/promise`
--   **Date/Time Handling**: `moment-timezone`
+### Backend
+-   **Platform**: Cloudflare Workers
+-   **Database**: Cloudflare D1
+-   **Routing**: Itty Router
+-   **Deployment Tool**: Wrangler CLI
 
 ## 4. Setup and Installation
 
 ### Prerequisites
 -   Node.js (v18 or higher recommended)
--   A running MySQL database server
-
-### Backend Setup (Express)
-1.  Navigate to the `express` directory:
+-   A Cloudflare account
+-   Wrangler CLI installed globally:
     ```bash
-    cd express
+    npm install -g wrangler
+    ```
+
+### Backend Setup (Cloudflare Workers)
+1.  Navigate to the `backend` directory:
+    ```bash
+    cd backend
     ```
 2.  Install the dependencies:
     ```bash
     npm install
     ```
-3.  Create a `.env` file in the `express` directory and provide your database configuration:
-    ```env
-    MYSQL_HOST=localhost
-    MYSQL_USER=root
-    MYSQL_DB=your_database_name
-    MYSQL_PASSWORD=your_password
-    PORT=3001
-    ```
-4.  Start the backend server:
+3.  Authenticate Wrangler with your Cloudflare account:
     ```bash
-    npm start
+    wrangler login
     ```
-    The server will be running at `http://localhost:3001`.
+4.  Create a D1 database via the Cloudflare dashboard or CLI. Then, update the `wrangler.toml` file with your `database_id`. You can also execute the schema from `pkl_backup.sql` into your D1 database.
+5.  Start the local development server:
+    ```bash
+    wrangler dev
+    ```
+    The server will be running at `http://localhost:8787`.
 
 ### Frontend Setup
 1.  Navigate to the `frontend` directory:
@@ -69,50 +69,59 @@ The repository is organized into several key directories:
     ```
 3.  Create a `.env` file in the `frontend` directory to connect to the backend:
     ```env
-    VITE_API_BASE_URL=http://localhost:3001
+    VITE_API_BASE_URL=http://localhost:8787
     ```
+    *Note: Ensure the URL matches your running Wrangler dev server.*
 4.  Start the frontend development server:
     ```bash
     npm run dev
     ```
     The application will be accessible at `http://localhost:5173` (or another available port).
 
-## 5. Database Schema (MySQL)
+## 5. Database Schema (Cloudflare D1)
 
-Based on the code analysis, the following tables are required by the application:
+Based on the `backend/pkl_backup.sql` file, the following tables are required:
 
 1.  **`incidents`**: Stores all active work order data.
     -   `incident` (PRIMARY KEY)
     -   `status` (e.g., 'OPEN', 'BACKEND', 'RESOLVED', 'CLOSED')
     -   `reported_date` (DATETIME)
     -   `resolve_date` (DATETIME, nullable)
-    -   `workzone` (VARCHAR)
-    -   `sektor` (VARCHAR, nullable)
-    -   `ttr_customer`, `ttr_agent`, etc. (VARCHAR, nullable)
-    -   ...and other fields as defined in the `allowedFields` array in `InputWO.jsx`.
+    -   ...and other relevant fields.
 2.  **`reports`**: Serves as an archive for completed incidents. Its structure is identical to the `incidents` table.
 3.  **`workzone_map`**: A mapping table used to automatically populate the `sektor` field.
     -   `workzone`
     -   `sektor`
+4.  **`users`**: Stores user data for authentication.
+    - `id` (INTEGER PRIMARY KEY)
+    - `username` (TEXT UNIQUE)
+    - `password` (TEXT)
+    - `role` (TEXT)
 
-## 6. API Endpoints (Express)
+## 6. API Endpoints
 
-The following are the main endpoints exposed by the Express backend (`/express/routes/apiRoutes.js`):
+The main endpoints are exposed by the Cloudflare Worker backend (`backend/src/index.js`):
 
-| Method | Endpoint                      | Description                                                                                                                                                                                                                                                                                             |
-| :----- | :---------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `GET`  | `/view-mysql`                 | Retrieves all records from the `incidents` table.                                                                                                                                                                     |
-| `GET`  | `/workzone-map`               | Fetches mapping data from the `workzone_map` table.                                                                                                                                                             |
-| `PUT`  | `/work-orders/:incident`      | Updates an incident by its ID. **Business Logic**: Automatically calculates TTR and sets `resolve_date` when the status changes to `RESOLVED` or `CLOSED`. It clears these fields if the ticket is reopened. |
-| `DELETE`| `/work-orders/:incident`    | Deletes a single incident from the `incidents` table.                                                                                                                                                           |
-| `POST` | `/work-orders/:incident/complete` | Moves an incident from the `incidents` table to the `reports` table. This is executed within a database transaction to ensure data integrity.                                                               |
-| `POST` | `/reports/:incident/reopen`   | *Inferred from frontend code*: Moves a ticket from the `reports` archive back to the active `incidents` list.                                                                                                        |
+| Method | Endpoint                      | Description                                                  |
+| :----- | :---------------------------- | :----------------------------------------------------------- |
+| `POST` | `/api/login`                  | Authenticates a user and returns a token.                    |
+| `GET`  | `/api/work-orders`            | Retrieves all records from the `incidents` table.            |
+| `POST` | `/api/work-orders`            | Adds new work orders in bulk.                                |
+| `PUT`  | `/api/work-orders/:incident`  | Updates a single incident by its ID.                         |
+| `DELETE`| `/api/work-orders/:incident` | Deletes a single incident from the `incidents` table.        |
+| `POST` | `/api/work-orders/:incident/complete` | Moves an incident from `incidents` to the `reports` table.   |
+| `GET`  | `/api/reports`                | Retrieves records from the `reports` table with date filters.|
+| `POST` | `/api/reports/:incident/reopen`   | Moves a ticket from `reports` back to the `incidents` table. |
+| `GET`  | `/api/workzone-map`           | Fetches mapping data from the `workzone_map` table.          |
+| `GET`  | `/api/users`                  | Retrieves a list of all users.                               |
+| `POST` | `/api/register`               | Registers a new user.                                        |
+
 
 ## 7. Key Frontend Logic
 
 -   **Data Input (`InputWO.jsx`)**:
     -   This component can parse data from multiple formats (TSV, JSON, Excel).
-    -   Before sending data to the backend, it is automatically enriched: the `sektor` field is populated based on the `workzone` value by using data from the `GET /workzone-map` endpoint.
+    -   It automatically enriches data by populating the `sektor` field based on the `workzone` value using data from the `GET /api/workzone-map` endpoint.
 -   **Reporting (`Report.jsx`)**:
     -   Displays data from the `reports` table with filtering capabilities by date range.
     -   Presents a data visualization using `Chart.js` to show trends of completed tickets.
