@@ -55,34 +55,71 @@ router.post('/mypost', async (request, env) => {
   }
 
   let workOrderProcessed = 0;
-  let totalAddressUpdates = 0;
 
   try {
-    // Ambil Mapping Workzone
-    const { results: mapResults } = await env.DB.prepare(
+    // 1. SIAPKAN DATA REFERENSI (WORKZONE & ALAMAT) SECARA PARALEL
+    
+    // Ambil list service_no dari data input untuk query alamat spesifik saja (biar tidak load semua DB)
+    const serviceNos = data
+      .map(row => row.service_no)
+      .filter(no => no); // Filter yang tidak null/undefined
+
+    // Query 1: Mapping Workzone
+    const workzoneQuery = env.DB.prepare(
       'SELECT workzone, sektor, korlap_username FROM workzone_details WHERE workzone IS NOT NULL'
     ).all();
 
-    const workzoneToSektorMap = mapResults.reduce((acc, { workzone, sektor }) => {
+    // Query 2: Mapping Alamat (Hanya untuk service_no yang ada di request ini)
+    // Catatan: Jika data input sangat banyak (>100), sebaiknya dibatasi/chunk, tapi untuk batch wajar ini aman.
+    let addressMap = {};
+    let addressQueryPromise = Promise.resolve({ results: [] });
+    
+    if (serviceNos.length > 0) {
+        // Buat placeholder (?,?,?) sesuai jumlah service_no
+        const placeholders = serviceNos.map(() => '?').join(',');
+        const query = `SELECT service_no, alamat FROM data_layanan WHERE service_no IN (${placeholders}) AND alamat IS NOT NULL`;
+        addressQueryPromise = env.DB.prepare(query).bind(...serviceNos).all();
+    }
+
+    // Jalankan kedua query secara paralel biar cepat
+    const [workzoneResult, addressResult] = await Promise.all([workzoneQuery, addressQueryPromise]);
+
+    // Buat Map Workzone
+    const workzoneToSektorMap = workzoneResult.results.reduce((acc, { workzone, sektor }) => {
       if (sektor) acc[workzone] = sektor;
       return acc;
     }, {});
     
-    const workzoneToKorlapMap = mapResults.reduce((acc, { workzone, korlap_username }) => {
+    const workzoneToKorlapMap = workzoneResult.results.reduce((acc, { workzone, korlap_username }) => {
         if (korlap_username) acc[workzone] = korlap_username;
         return acc;
     }, {});
 
+    // Buat Map Alamat
+    const serviceToAddressMap = addressResult.results.reduce((acc, { service_no, alamat }) => {
+        if (service_no && alamat) acc[service_no] = alamat;
+        return acc;
+    }, {});
+
+    // 2. PROSES DATA (Gabungkan Logic Workzone & Alamat DI SINI)
     const workOrderStmts = [];
+    
     for (const row of data) {
       if (!row.incident) continue;
 
-      // Auto-fill Sektor & Korlap
+      // Logic A: Auto-fill Sektor & Korlap
       if (row.workzone) {
         if (workzoneToSektorMap[row.workzone]) row.sektor = workzoneToSektorMap[row.workzone];
         if (workzoneToKorlapMap[row.workzone]) row.korlap = workzoneToKorlapMap[row.workzone];
       }
 
+      // Logic B: Auto-fill Alamat (Disatukan)
+      // Jika di input alamat kosong, tapi kita punya datanya di Map, pakai data Map.
+      if ((!row.alamat || row.alamat === '') && row.service_no && serviceToAddressMap[row.service_no]) {
+        row.alamat = serviceToAddressMap[row.service_no];
+      }
+
+      // Persiapan Insert
       const validKeys = Object.keys(row).filter((key) => WORK_ORDER_COLUMNS.includes(key));
       const values = validKeys.map((key) => row[key]);
       const query = `INSERT INTO work_orders (${validKeys.join(', ')}) VALUES (${'?'.repeat(validKeys.length).split('').join(',')});`;
@@ -91,22 +128,11 @@ router.post('/mypost', async (request, env) => {
       workOrderProcessed++;
     }
 
+    // 3. EKSEKUSI BATCH (Hanya sekali akses tulis ke DB)
     if (workOrderStmts.length > 0) await env.DB.batch(workOrderStmts);
 
-    // Auto-sync Alamat jika kosong di WO tapi ada di data_layanan
-    const { results: addressesToSync } = await env.DB.prepare(
-      "SELECT service_no, alamat FROM data_layanan WHERE service_no IN (SELECT service_no FROM work_orders WHERE alamat IS NULL OR alamat = '') AND alamat IS NOT NULL"
-    ).all();
+    return json({ success: true, message: `Sukses. ${workOrderProcessed} WO diproses dan alamat otomatis dilengkapi.` }, { status: 201 });
 
-    if (addressesToSync?.length > 0) {
-      const syncStmts = addressesToSync.map((addr) =>
-        env.DB.prepare('UPDATE work_orders SET alamat = ? WHERE service_no = ?').bind(addr.alamat, addr.service_no)
-      );
-      const batchResult = await env.DB.batch(syncStmts);
-      totalAddressUpdates = batchResult.reduce((sum, r) => sum + (r.success ? r.meta.changes : 0), 0);
-    }
-
-    return json({ success: true, message: `Sukses. ${workOrderProcessed} WO diproses. ${totalAddressUpdates} alamat disinkronkan.` }, { status: 201 });
   } catch (err) {
     console.error('Error /mypost:', err);
     return json({ success: false, error: err.message }, { status: 500 });
