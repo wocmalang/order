@@ -115,7 +115,7 @@ router.post('/mypost', async (request, env) => {
 
       // Logic B: Auto-fill Alamat (Disatukan)
       // Jika di input alamat kosong, tapi kita punya datanya di Map, pakai data Map.
-      if ((!row.alamat || row.alamat === '') && row.service_no && serviceToAddressMap[row.service_no]) {
+      if (row.service_no && serviceToAddressMap[row.service_no]) {
         row.alamat = serviceToAddressMap[row.service_no];
       }
 

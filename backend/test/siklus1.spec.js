@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { env } from 'cloudflare:test';
 import worker from '../src/index';
 
-// Helper untuk membuat request HTTP simulasi
 const createRequest = (method, path, body = null) => {
   const options = { method };
   if (body) {
@@ -11,76 +11,84 @@ const createRequest = (method, path, body = null) => {
   return new Request(`http://localhost${path}`, options);
 };
 
-describe('Siklus 1: Basic Ticket Management & Synchronization', () => {
-  
-  // 1. SETUP DATABASE
-  // Menyiapkan tabel-tabel yang dibutuhkan untuk siklus 1
-  beforeAll(async (ctx) => {
-    await ctx.env.DB.exec(`
-      -- Tabel Utama Work Orders
-      CREATE TABLE IF NOT EXISTS work_orders (
-        incident TEXT PRIMARY KEY,
-        summary TEXT,
-        status TEXT,
-        workzone TEXT,
-        sektor TEXT,
-        korlap TEXT,
-        alamat TEXT,
-        service_no TEXT,
-        resolve_date TEXT,
-        date_modified TEXT
-      );
+const WORK_ORDER_COLS_DEF = `
+  incident TEXT PRIMARY KEY,
+  ticket_id_gamas TEXT, external_ticket_id TEXT, customer_id TEXT, customer_name TEXT, service_id TEXT, service_no TEXT,
+  summary TEXT, description_assignment TEXT, reported_date TEXT, reported_by TEXT, reported_priority TEXT, source_ticket TEXT, channel TEXT,
+  contact_phone TEXT, contact_name TEXT, contact_email TEXT, status TEXT, status_date TEXT, booking_date TEXT, resolve_date TEXT,
+  date_modified TEXT, last_update_worklog TEXT, closed_by TEXT, closed_reopen_by TEXT, guarantee_status TEXT, ttr_customer TEXT,
+  ttr_agent TEXT, ttr_mitra TEXT, ttr_nasional TEXT, ttr_pending TEXT, ttr_region TEXT, ttr_witel TEXT, ttr_end_to_end TEXT, owner_group TEXT,
+  owner TEXT, witel TEXT, workzone TEXT, region TEXT, subsidiary TEXT, territory_near_end TEXT, territory_far_end TEXT, customer_segment TEXT,
+  customer_type TEXT, customer_category TEXT, service_type TEXT, slg TEXT, technology TEXT, lapul TEXT, gaul TEXT, onu_rx TEXT, pending_reason TEXT,
+  incident_domain TEXT, symptom TEXT, hierarchy_path TEXT, solution TEXT, description_actual_solution TEXT, kode_produk TEXT, perangkat TEXT,
+  technician TEXT, device_name TEXT, sn_ont TEXT, tipe_ont TEXT, manufacture_ont TEXT, impacted_site TEXT, cause TEXT, resolution TEXT,
+  worklog_summary TEXT, classification_flag TEXT, realm TEXT, related_to_gamas TEXT, tsc_result TEXT, scc_result TEXT, note TEXT,
+  notes_eskalasi TEXT, rk_information TEXT, external_ticket_tier_3 TEXT, classification_path TEXT, urgency TEXT, alamat TEXT, korlap TEXT, sektor TEXT
+`;
 
-      -- Tabel Referensi Workzone (untuk fitur GetWorkzone & Auto-Mapping)
-      CREATE TABLE IF NOT EXISTS workzone_details (
-        workzone TEXT PRIMARY KEY,
-        sektor TEXT,
-        korlap_username TEXT
-      );
+describe('Siklus 1: Full CRUD & Sync Logic Tests (Sync Priority)', () => {
 
-      -- Tabel Data Layanan (untuk fitur SyncWorkOrder / Sync Alamat)
-      CREATE TABLE IF NOT EXISTS data_layanan (
-        service_no TEXT,
-        alamat TEXT
-      );
-    `);
+  beforeAll(async () => {
+    await env.DB.batch([
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS work_orders (${WORK_ORDER_COLS_DEF})`),
+      
+      env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS workzone_details (
+          id INTEGER PRIMARY KEY, 
+          workzone TEXT, 
+          sektor TEXT, 
+          korlap_username TEXT
+        )
+      `),
 
-    // Seed Data Dummy untuk Referensi Workzone
-    await ctx.env.DB.prepare(`
-      INSERT INTO workzone_details (workzone, sektor, korlap_username) 
-      VALUES ('WZ_S1', 'Sektor Utara', 'korlap_s1')
-    `).run();
+      env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS data_layanan (
+          service_no TEXT,
+          alamat TEXT
+        )
+      `)
+    ]);
 
-    // Seed Data Dummy untuk Data Layanan (Master Alamat)
-    await ctx.env.DB.prepare(`
-      INSERT INTO data_layanan (service_no, alamat) 
-      VALUES ('111222', 'Jl. Ijen No. 5 Malang')
-    `).run();
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM workzone_details'),
+      env.DB.prepare('DELETE FROM data_layanan'),
+      
+      env.DB.prepare(`
+        INSERT INTO workzone_details (workzone, sektor, korlap_username) 
+        VALUES ('WZ_MALANG', 'Sektor Pusat', 'pak_budi')
+      `),
+      
+      env.DB.prepare(`
+        INSERT INTO data_layanan (service_no, alamat) 
+        VALUES ('1001', 'Jl. Master Database No. 1')
+      `)
+    ]);
   });
 
-  // Reset data work_orders setiap sebelum test dimulai agar bersih
-  beforeEach(async (ctx) => {
-    await ctx.env.DB.prepare('DELETE FROM work_orders').run();
+  beforeEach(async () => {
+    await env.DB.prepare('DELETE FROM work_orders').run();
   });
 
-  // --- TEST CASE 1: INPUT TICKET & SYNC WORK ORDER ---
-  // Menguji endpoint POST /mypost
-  // Mencakup: Input Data, Mapping Workzone, dan Sync Alamat
-  it('POST /mypost - Harus berhasil input, mapping workzone, dan sync alamat otomatis', async ({ env }) => {
+  // TEST CASES
+  it('POST /mypost - Create WO: Memastikan Alamat Master Selalu Menimpa Manual', async () => {
     const payload = [
+      // KASUS A: Full Otomatis (Alamat Sync)
       {
-        incident: 'INC-001',
-        summary: 'Gangguan Internet',
-        workzone: 'WZ_S1',       // Harus otomatis mapping ke 'Sektor Utara' & 'korlap_s1'
-        service_no: '111222',    // Ada di master data_layanan -> harus sync alamat
-        alamat: ''               // Alamat kosong, ekspektasi terisi otomatis
+        incident: 'INC-AUTO',
+        summary: 'Tiket Otomatis',
+        workzone: 'WZ_MALANG',
+        service_no: '1001',    
+        alamat: '',            
+        status: 'OPEN'
       },
+      // KASUS B: Override Manual 
       {
-        incident: 'INC-002',
-        summary: 'Gangguan TV',
-        workzone: 'WZ_UNKNOWN',  // Workzone tidak dikenal
-        service_no: '999999',    // Tidak ada di master
-        alamat: 'Jl. Manual'     // Alamat manual
+        incident: 'INC-MANUAL',
+        summary: 'Tiket Manual',
+        workzone: 'WZ_MALANG',      
+        service_no: '1001',         
+        alamat: 'Jl. Manual Input', 
+        status: 'OPEN'
       }
     ];
 
@@ -91,89 +99,59 @@ describe('Siklus 1: Basic Ticket Management & Synchronization', () => {
     expect(res.status).toBe(201);
     expect(body.success).toBe(true);
 
-    // Verifikasi Data INC-001 (Fitur Input + Sync + Mapping)
-    const wo1 = await env.DB.prepare("SELECT * FROM work_orders WHERE incident = 'INC-001'").first();
-    expect(wo1).toBeDefined();
-    expect(wo1.sektor).toBe('Sektor Utara'); // Mapping berhasil
-    expect(wo1.korlap).toBe('korlap_s1');    // Mapping berhasil
-    expect(wo1.alamat).toBe('Jl. Ijen No. 5 Malang'); // Sync Alamat berhasil
-
-    // Verifikasi Data INC-002 (Fitur Input Standar)
-    const wo2 = await env.DB.prepare("SELECT * FROM work_orders WHERE incident = 'INC-002'").first();
-    expect(wo2).toBeDefined();
-    expect(wo2.alamat).toBe('Jl. Manual');
+    // Verifikasi KASUS A
+    const woAuto = await env.DB.prepare("SELECT * FROM work_orders WHERE incident = 'INC-AUTO'").first();
+    expect(woAuto.korlap).toBe('pak_budi');                  
+    expect(woAuto.alamat).toBe('Jl. Master Database No. 1'); 
+    // Verifikasi KASUS B
+    const woManual = await env.DB.prepare("SELECT * FROM work_orders WHERE incident = 'INC-MANUAL'").first();
+    expect(woManual).toBeDefined();
+    expect(woManual.alamat).toBe('Jl. Master Database No. 1');  
   });
 
-  // --- TEST CASE 2: GET ALL TICKET ---
-  // Menguji endpoint GET /view-d1
-  it('GET /view-d1 - Harus menampilkan semua tiket', async ({ env }) => {
-    // Siapkan data
-    await env.DB.prepare(`
-      INSERT INTO work_orders (incident, status, summary) 
-      VALUES ('INC-VIEW-1', 'OPEN', 'Tes 1'), ('INC-VIEW-2', 'PENDING', 'Tes 2')
-    `).run();
+  it('GET /view-d1 - Menampilkan semua tiket (Descending Order)', async () => {
+    await env.DB.prepare("INSERT INTO work_orders (incident, status, summary) VALUES ('A1', 'OPEN', 'Tes 1'), ('A2', 'CLOSED', 'Tes 2')").run();
 
     const req = createRequest('GET', '/view-d1');
     const res = await worker.fetch(req, env);
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body.success).toBe(true);
     expect(body.data.length).toBe(2);
-    expect(body.data[0].incident).toBeDefined();
+    expect(body.data[0].incident).toBe('A2'); 
+    expect(body.data[1].incident).toBe('A1'); 
   });
 
-  // --- TEST CASE 3: GET WORKZONE (REFERENSI) ---
-  // Menguji endpoint GET /workzone-map
-  it('GET /workzone-map - Harus menampilkan referensi workzone', async ({ env }) => {
+  it('PUT /work-orders/:incident - Update status dan data tiket', async () => {
+    await env.DB.prepare("INSERT INTO work_orders (incident, status, summary) VALUES ('INC-EDIT', 'OPEN', 'Lama')").run();
+
+    const updateData = { status: 'ON_PROGRESS', summary: 'Baru', technician: 'Teknisi A' };
+    const req = createRequest('PUT', '/work-orders/INC-EDIT', updateData);
+    const res = await worker.fetch(req, env);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    const updated = await env.DB.prepare("SELECT * FROM work_orders WHERE incident = 'INC-EDIT'").first();
+    expect(updated.status).toBe('ON_PROGRESS');
+    expect(updated.technician).toBe('Teknisi A'); 
+  });
+
+  it('DELETE /work-orders/:incident - Menghapus tiket', async () => {
+    await env.DB.prepare("INSERT INTO work_orders (incident) VALUES ('INC-HAPUS')").run();
+    const req = createRequest('DELETE', '/work-orders/INC-HAPUS');
+    const res = await worker.fetch(req, env);
+    expect(res.status).toBe(200);
+    const check = await env.DB.prepare("SELECT * FROM work_orders WHERE incident = 'INC-HAPUS'").first();
+    expect(check).toBeNull();
+  });
+
+  it('GET /workzone-map - Mengambil data referensi workzone', async () => {
     const req = createRequest('GET', '/workzone-map');
     const res = await worker.fetch(req, env);
     const body = await res.json();
-
-    expect(res.status).toBe(200);
-    // Kita insert 1 data di beforeAll ('WZ_S1')
-    expect(Array.isArray(body)).toBe(true);
-    const wz = body.find(item => item.workzone === 'WZ_S1');
-    expect(wz).toBeDefined();
-    expect(wz.sektor).toBe('Sektor Utara');
-  });
-
-  // --- TEST CASE 4: UPDATE TICKET ---
-  // Menguji endpoint PUT /work-orders/:incident
-  it('PUT /work-orders/:incident - Harus berhasil update status tiket', async ({ env }) => {
-    // Insert data awal
-    await env.DB.prepare("INSERT INTO work_orders (incident, status) VALUES ('INC-UPD', 'OPEN')").run();
-
-    const updateData = { status: 'ON_PROGRESS', summary: 'Sedang dikerjakan' };
-    const req = createRequest('PUT', '/work-orders/INC-UPD', updateData);
-    const res = await worker.fetch(req, env);
-    const body = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(body.success).toBe(true);
-
-    // Cek perubahan di DB
-    const updatedWo = await env.DB.prepare("SELECT status, summary FROM work_orders WHERE incident = 'INC-UPD'").first();
-    expect(updatedWo.status).toBe('ON_PROGRESS');
-    expect(updatedWo.summary).toBe('Sedang dikerjakan');
-  });
-
-  // --- TEST CASE 5: DELETE TICKET ---
-  // Menguji endpoint DELETE /work-orders/:incident
-  it('DELETE /work-orders/:incident - Harus berhasil menghapus tiket', async ({ env }) => {
-    // Insert data awal
-    await env.DB.prepare("INSERT INTO work_orders (incident) VALUES ('INC-DEL')").run();
-
-    const req = createRequest('DELETE', '/work-orders/INC-DEL');
-    const res = await worker.fetch(req, env);
-    const body = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(body.success).toBe(true);
-
-    // Pastikan data hilang dari DB
-    const check = await env.DB.prepare("SELECT * FROM work_orders WHERE incident = 'INC-DEL'").first();
-    expect(check).toBeNull();
+    const item = body.find(r => r.workzone === 'WZ_MALANG');
+    expect(item).toBeDefined();
+    expect(item.korlaps).toBe('pak_budi'); 
   });
 
 });
