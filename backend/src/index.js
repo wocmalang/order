@@ -2,7 +2,7 @@ import { Router, json } from 'itty-router';
 import { WorkOrderController } from './controllers/WorkOrderController.js';
 import { ReportController } from './controllers/ReportController.js';
 import { AuthController } from './controllers/AuthController.js';
-import { DataLayananController } from './controller/DataLayananController.js';
+import { DataLayananController } from './controllers/DataLayananController.js';
 
 // Middleware CORS
 const withCORS = (response) => {
