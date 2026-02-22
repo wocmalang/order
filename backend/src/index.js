@@ -2,11 +2,12 @@ import { Router, json } from 'itty-router';
 import { WorkOrderController } from './controllers/WorkOrderController.js';
 import { ReportController } from './controllers/ReportController.js';
 import { AuthController } from './controllers/AuthController.js';
+import { DataLayananController } from './controller/DataLayananController.js';
 
 // Middleware CORS
 const withCORS = (response) => {
   if (!response) return response;
-  response.headers.set('Access-Control-Allow-Origin', '*'); // Ubah '*' dengan 'http://localhost:5173' jika ingin lebih ketat
+  response.headers.set('Access-Control-Allow-Origin', '*');
   response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   return response;
@@ -17,8 +18,7 @@ const ctrl = (Class, method) => (req, env, ctx) => new Class()[method](req, env,
 
 // --- ROUTES ---
 
-// 1. Preflight CORS Handler (TAMBAHKAN INI)
-// Ini menangani request OPTIONS dari browser agar tidak kena 404
+// 1. Preflight CORS Handler
 router.options('*', () => new Response(null, { status: 'ok',  message: 'Backend API is running.', version: '2.0.0'  }));
 
 // 2. Auth & User Management
