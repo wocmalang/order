@@ -1,356 +1,53 @@
 import { Router, json } from 'itty-router';
+import { WorkOrderController } from './controllers/WorkOrderController.js';
+import { ReportController } from './controllers/ReportController.js';
+import { AuthController } from './controllers/AuthController.js';
 
-// --- KONSTANTA KOLOM (Sesuai kebutuhan FE) ---
-const WORK_ORDER_COLUMNS = [
-  'incident', 'ticket_id_gamas', 'external_ticket_id', 'customer_id', 'customer_name', 'service_id', 'service_no',
-  'summary', 'description_assignment', 'reported_date', 'reported_by', 'reported_priority', 'source_ticket', 'channel',
-  'contact_phone', 'contact_name', 'contact_email', 'status', 'status_date', 'booking_date', 'resolve_date',
-  'date_modified', 'last_update_worklog', 'closed_by', 'closed_reopen_by', 'guarantee_status', 'ttr_customer',
-  'ttr_agent', 'ttr_mitra', 'ttr_nasional', 'ttr_pending', 'ttr_region', 'ttr_witel', 'ttr_end_to_end', 'owner_group',
-  'owner', 'witel', 'workzone', 'region', 'subsidiary', 'territory_near_end', 'territory_far_end', 'customer_segment',
-  'customer_type', 'customer_category', 'service_type', 'slg', 'technology', 'lapul', 'gaul', 'onu_rx', 'pending_reason',
-  'incident_domain', 'symptom', 'hierarchy_path', 'solution', 'description_actual_solution', 'kode_produk', 'perangkat',
-  'technician', 'device_name', 'sn_ont', 'tipe_ont', 'manufacture_ont', 'impacted_site', 'cause', 'resolution',
-  'worklog_summary', 'classification_flag', 'realm', 'related_to_gamas', 'tsc_result', 'scc_result', 'note',
-  'notes_eskalasi', 'rk_information', 'external_ticket_tier_3', 'classification_path', 'urgency', 'alamat', 'korlap', 'sektor',
-];
-
-const jsonResponse = (data, options = {}) => json(data, { status: 200, ...options });
-
+// Middleware CORS
 const withCORS = (response) => {
-  response.headers.set('Access-Control-Allow-Origin', '*');
+  if (!response) return response;
+  response.headers.set('Access-Control-Allow-Origin', '*'); // Ubah '*' dengan 'http://localhost:5173' jika ingin lebih ketat
   response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   return response;
 };
 
-const withDB = (request, env) => {
-  if (!env.DB) return jsonResponse({ success: false, error: 'Database connection not configured.' }, { status: 500 });
-};
-
 const router = Router();
+const ctrl = (Class, method) => (req, env, ctx) => new Class()[method](req, env, ctx);
 
-// CORS Pre-flight
-router.options('*', () => new Response(null, {
-  headers: {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  },
-}));
+// --- ROUTES ---
 
-router.all('*', withDB);
+// 1. Preflight CORS Handler (TAMBAHKAN INI)
+// Ini menangani request OPTIONS dari browser agar tidak kena 404
+router.options('*', () => new Response(null, { status: 204 }));
 
-// Health Check
-router.get('/', () => jsonResponse({ status: 'ok', message: 'Backend API is running.', version: '1.6.4' }));
+// 2. Auth & User Management
+router.post('/login', ctrl(AuthController, 'login'));
+router.get('/users', ctrl(AuthController, 'listUsers'));
+router.post('/users', ctrl(AuthController, 'createUser'));
+router.delete('/users/:username', ctrl(AuthController, 'deleteUser'));
 
-/**
- * 1. INPUT DATA (Digunakan InputWO.jsx)
- * Mengisi otomatis Sektor & Korlap + Sync Alamat
- */
-router.post('/mypost', async (request, env) => {
-  const data = await request.json();
-  if (!Array.isArray(data) || data.length === 0) {
-    return json({ success: false, message: 'Data harus berupa array.' }, { status: 400 });
-  }
+// 3. Work Order Core
+router.post('/mypost', ctrl(WorkOrderController, 'create'));
+router.get('/view-d1', ctrl(WorkOrderController, 'viewAll'));
+router.put('/work-orders/:incident', ctrl(WorkOrderController, 'update'));
+router.delete('/work-orders/:incident', ctrl(WorkOrderController, 'delete'));
+router.get('/workzone-map', ctrl(WorkOrderController, 'getWorkzoneMap'));
 
-  let workOrderProcessed = 0;
+// 4. Close Ticket & Reports
+router.post('/work-orders/:incident/complete', ctrl(WorkOrderController, 'complete'));
+router.get('/reports', ctrl(ReportController, 'viewAll'));
+router.post('/reports/:incident/reopen', ctrl(ReportController, 'reopen'));
 
-  try {
-    // 1. SIAPKAN DATA REFERENSI (WORKZONE & ALAMAT) SECARA PARALEL
-    
-    // Ambil list service_no dari data input untuk query alamat spesifik saja (biar tidak load semua DB)
-    const serviceNos = data
-      .map(row => row.service_no)
-      .filter(no => no); // Filter yang tidak null/undefined
-
-    // Query 1: Mapping Workzone
-    const workzoneQuery = env.DB.prepare(
-      'SELECT workzone, sektor, korlap_username FROM workzone_details WHERE workzone IS NOT NULL'
-    ).all();
-
-    // Query 2: Mapping Alamat (Hanya untuk service_no yang ada di request ini)
-    // Catatan: Jika data input sangat banyak (>100), sebaiknya dibatasi/chunk, tapi untuk batch wajar ini aman.
-    let addressMap = {};
-    let addressQueryPromise = Promise.resolve({ results: [] });
-    
-    if (serviceNos.length > 0) {
-        // Buat placeholder (?,?,?) sesuai jumlah service_no
-        const placeholders = serviceNos.map(() => '?').join(',');
-        const query = `SELECT service_no, alamat FROM data_layanan WHERE service_no IN (${placeholders}) AND alamat IS NOT NULL`;
-        addressQueryPromise = env.DB.prepare(query).bind(...serviceNos).all();
-    }
-
-    // Jalankan kedua query secara paralel biar cepat
-    const [workzoneResult, addressResult] = await Promise.all([workzoneQuery, addressQueryPromise]);
-
-    // Buat Map Workzone
-    const workzoneToSektorMap = workzoneResult.results.reduce((acc, { workzone, sektor }) => {
-      if (sektor) acc[workzone] = sektor;
-      return acc;
-    }, {});
-    
-    const workzoneToKorlapMap = workzoneResult.results.reduce((acc, { workzone, korlap_username }) => {
-        if (korlap_username) acc[workzone] = korlap_username;
-        return acc;
-    }, {});
-
-    // Buat Map Alamat
-    const serviceToAddressMap = addressResult.results.reduce((acc, { service_no, alamat }) => {
-        if (service_no && alamat) acc[service_no] = alamat;
-        return acc;
-    }, {});
-
-    // 2. PROSES DATA (Gabungkan Logic Workzone & Alamat DI SINI)
-    const workOrderStmts = [];
-    
-    for (const row of data) {
-      if (!row.incident) continue;
-
-      // Logic A: Auto-fill Sektor & Korlap
-      if (row.workzone) {
-        if (workzoneToSektorMap[row.workzone]) row.sektor = workzoneToSektorMap[row.workzone];
-        if (workzoneToKorlapMap[row.workzone]) row.korlap = workzoneToKorlapMap[row.workzone];
-      }
-
-      // Logic B: Auto-fill Alamat (Disatukan)
-      // Jika di input alamat kosong, tapi kita punya datanya di Map, pakai data Map.
-      if (row.service_no && serviceToAddressMap[row.service_no]) {
-        row.alamat = serviceToAddressMap[row.service_no];
-      }
-
-      // Persiapan Insert
-      const validKeys = Object.keys(row).filter((key) => WORK_ORDER_COLUMNS.includes(key));
-      const values = validKeys.map((key) => row[key]);
-      const query = `INSERT INTO work_orders (${validKeys.join(', ')}) VALUES (${'?'.repeat(validKeys.length).split('').join(',')});`;
-      
-      workOrderStmts.push(env.DB.prepare(query).bind(...values));
-      workOrderProcessed++;
-    }
-
-    // 3. EKSEKUSI BATCH (Hanya sekali akses tulis ke DB)
-    if (workOrderStmts.length > 0) await env.DB.batch(workOrderStmts);
-
-    return json({ success: true, message: `Sukses. ${workOrderProcessed} WO diproses dan alamat otomatis dilengkapi.` }, { status: 201 });
-
-  } catch (err) {
-    console.error('Error /mypost:', err);
-    return json({ success: false, error: err.message }, { status: 500 });
-  }
-});
-
-/**
- * 2. READ DATA (Digunakan LihatWO.jsx & InputWO.jsx)
- * Menampilkan data WO + Flag Duplikat
- */
-router.get('/view-d1', async (request, env) => {
-  try {
-    const query = `
-      WITH BaseWO AS (
-        SELECT *,
-            CASE WHEN INSTR(incident, '-') > 0 THEN SUBSTR(incident, 1, INSTR(incident, '-') - 1) ELSE incident END as base_incident_id
-        FROM work_orders
-      ),
-      RankedWO AS (
-        SELECT *, COUNT(*) OVER(PARTITION BY base_incident_id) as group_count FROM BaseWO
-      )
-      SELECT *,
-          (CASE WHEN group_count > 1 AND INSTR(incident, '-') > 0 AND status != 'CLOSED' THEN 1 ELSE 0 END) AS is_duplicate,
-          (CASE WHEN group_count > 1 AND INSTR(incident, '-') > 0 AND status != 'CLOSED' THEN -2 ELSE NULL END) AS ttr_end_to_end
-      FROM RankedWO ORDER BY incident DESC;
-    `;
-    const { results } = await env.DB.prepare(query).all();
-    return json({ success: true, count: results.length, data: results });
-  } catch (err) {
-    return json({ success: false, error: err.message }, { status: 500 });
-  }
-});
-
-/**
- * 3. UPDATE DATA (Digunakan LihatWO.jsx - Edit Modal)
- */
-router.put('/work-orders/:incident', async (request, env) => {
-  const { incident } = request.params;
-  const data = await request.json();
-
-  try {
-    const keysToUpdate = Object.keys(data).filter((key) => WORK_ORDER_COLUMNS.includes(key) && key !== 'incident');
-    if (keysToUpdate.length === 0) return jsonResponse({ success: false, message: 'Tidak ada data valid.' }, { status: 400 });
-
-    const setClauses = keysToUpdate.map((k) => `${k} = ?`).join(', ');
-    const values = keysToUpdate.map((key) => data[key]);
-
-    await env.DB.prepare(`UPDATE work_orders SET ${setClauses} WHERE incident = ?`).bind(...values, incident).run();
-    
-    // Return data terbaru
-    const { results } = await env.DB.prepare('SELECT * FROM work_orders WHERE incident = ?').bind(incident).all();
-    return jsonResponse({ success: true, message: 'Update berhasil.', data: results[0] });
-  } catch (err) {
-    return jsonResponse({ success: false, error: err.message }, { status: 500 });
-  }
-});
-
-/**
- * 4. DELETE DATA (Digunakan LihatWO.jsx - Hapus)
- */
-router.delete('/work-orders/:incident', async (request, env) => {
-  const { incident } = request.params;
-  try {
-    const { meta } = await env.DB.prepare('DELETE FROM work_orders WHERE incident = ?').bind(incident).run();
-    if (meta.changes === 0) return json({ success: false, message: 'Data tidak ditemukan.' }, { status: 404 });
-    return json({ success: true, message: 'Data dihapus.', changes: meta.changes });
-  } catch (err) {
-    return json({ success: false, error: err.message }, { status: 500 });
-  }
-});
-
-/**
- * 5. COMPLETE TICKET / CLOSE (Digunakan LihatWO.jsx)
- * Pindah ke tabel reports
- */
-router.post('/work-orders/:incident/complete', async (request, env) => {
-  const { incident } = request.params;
-  try {
-    const { results } = await env.DB.prepare('SELECT * FROM work_orders WHERE incident = ?').bind(incident).all();
-    if (results.length === 0) return jsonResponse({ success: false, message: 'WO tidak ditemukan.' }, { status: 404 });
-
-    const wo = results[0];
-    wo.status = 'CLOSED';
-    wo.resolve_date = new Date().toISOString();
-    wo.date_modified = new Date().toISOString();
-
-    const cols = Object.keys(wo);
-    const vals = Object.values(wo);
-
-    await env.DB.batch([
-      env.DB.prepare(`REPLACE INTO reports (${cols.join(', ')}) VALUES (${'?'.repeat(cols.length).split('').join(',')})`).bind(...vals),
-      env.DB.prepare('DELETE FROM work_orders WHERE incident = ?').bind(incident),
-    ]);
-
-    return jsonResponse({ success: true, message: 'WO selesai dan dipindah ke laporan.' });
-  } catch (err) {
-    return jsonResponse({ success: false, error: err.message }, { status: 500 });
-  }
-});
-
-/**
- * 6. VIEW REPORTS (Digunakan Report.jsx)
- */
-router.get('/reports', async (request, env) => {
-  try {
-    const { results } = await env.DB.prepare('SELECT * FROM reports ORDER BY reported_date DESC').all();
-    return json({ success: true, data: results });
-  } catch (err) {
-    return json({ success: false, error: err.message }, { status: 500 });
-  }
-});
-
-/**
- * 7. REOPEN TICKET (Digunakan Report.jsx)
- * Kembalikan ke work_orders
- */
-router.post('/reports/:incident/reopen', async (request, env) => {
-  const { incident } = request.params;
-  try {
-    const { results } = await env.DB.prepare('SELECT * FROM reports WHERE incident = ?').bind(incident).all();
-    if (results.length === 0) return jsonResponse({ success: false, message: 'Laporan tidak ditemukan.' }, { status: 404 });
-
-    const report = results[0];
-    report.status = 'OPEN';
-    report.resolve_date = null;
-    report.date_modified = new Date().toISOString();
-
-    const cols = Object.keys(report);
-    const vals = Object.values(report);
-
-    await env.DB.batch([
-      env.DB.prepare(`REPLACE INTO work_orders (${cols.join(', ')}) VALUES (${'?'.repeat(cols.length).split('').join(',')})`).bind(...vals),
-      env.DB.prepare('DELETE FROM reports WHERE incident = ?').bind(incident),
-    ]);
-
-    return jsonResponse({ success: true, message: 'WO dibuka kembali.' });
-  } catch (err) {
-    return jsonResponse({ success: false, error: err.message }, { status: 500 });
-  }
-});
-
-/**
- * 8. MAP REFERENCE (Digunakan InputWO.jsx & LihatWO.jsx)
- * Mengambil referensi Workzone -> Sektor/Korlap
- */
-router.get('/workzone-map', async (request, env) => {
-  try {
-    const { results } = await env.DB.prepare(`SELECT workzone, sektor, korlap_username AS korlaps FROM workzone_details ORDER BY workzone`).all();
-    return jsonResponse(results);
-  } catch (err) {
-    return jsonResponse({ error: err.message }, { status: 500 });
-  }
-});
-
-/**
- * 9. AUTH LOGIN (Digunakan AuthPage.jsx)
- */
-router.post('/login', async (request, env) => {
-  try {
-    const { username, password } = await request.json();
-    if (!username || !password) return json({ success: false, message: 'Input tidak lengkap.' }, { status: 400 });
-
-    const { results } = await env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(username).all();
-    if (!results.length || results[0].password !== password) {
-      return json({ success: false, message: 'Username atau Password salah.' }, { status: 401 });
-    }
-
-    const { password: _, ...user } = results[0];
-    return json({ success: true, user });
-  } catch (err) {
-    return json({ success: false, error: err.message }, { status: 500 });
-  }
-});
-
-/**
- * 10. USER MANAGEMENT (Digunakan UserManagementPage.jsx)
- * GET, POST, DELETE User
- */
-router.get('/users', async (request, env) => {
-  try {
-    const { results } = await env.DB.prepare('SELECT username, role FROM users').all();
-    return json({ success: true, users: results });
-  } catch (err) {
-    return json({ success: false, error: err.message }, { status: 500 });
-  }
-});
-
-router.post('/users', async (request, env) => {
-  try {
-    const { username, password, role } = await request.json();
-    if (!username || !password || !role) return json({ success: false, message: 'Data kurang.' }, { status: 400 });
-    
-    // Cek Duplikat
-    const { results } = await env.DB.prepare('SELECT username FROM users WHERE username = ?').bind(username).all();
-    if (results.length > 0) return json({ success: false, message: 'User sudah ada.' }, { status: 409 });
-
-    await env.DB.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)').bind(username, password, role).run();
-    return json({ success: true, message: 'User dibuat.' });
-  } catch (err) {
-    return json({ success: false, error: err.message }, { status: 500 });
-  }
-});
-
-router.delete('/users/:username', async (request, env) => {
-  const { username } = request.params;
-  try {
-    await env.DB.prepare('DELETE FROM users WHERE username = ?').bind(username).run();
-    return json({ success: true, message: 'User dihapus.' });
-  } catch (err) {
-    return json({ success: false, error: err.message }, { status: 500 });
-  }
-});
-
-router.all('*', () => new Response('404, Not Found.', { status: 404 }));
+// 404 Handler
+router.all('*', () => json({ error: 'Not Found' }, { status: 404 }));
 
 export default {
   async fetch(request, env, ctx) {
+    // 1. Jalankan router
     const response = await router.handle(request, env, ctx);
+    
+    // 2. Tempelkan header CORS ke response apapun (termasuk 204 dari OPTIONS atau 404 error)
     return withCORS(response);
   },
 };
