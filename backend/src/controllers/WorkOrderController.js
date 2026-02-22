@@ -70,17 +70,17 @@ export class WorkOrderController {
     const data = await req.json();
     const dao = new WorkOrderDAO(env.DB);
     
-    if (data.service_no && data.alamat) {
+    if (data.service_no) {
       const dlDao = new DataLayananDAO(env.DB);
       
-      // Simpan/Update ke tabel data_layanan menggunakan fungsi saveBatch yang sudah dibuat
-      await dlDao.saveBatch([{
-        service_no: data.service_no,
-        alamat: data.alamat
-      }]);
+      const masterAddresses = await dlDao.getAddressesByserviceNo([data.service_no]);
+      
+      if (masterAddresses.length > 0 && masterAddresses[0].alamat) {
+        data.alamat = masterAddresses[0].alamat;
+      }
     }
 
-    // Lanjutkan proses update work_orders seperti biasa
+    // Lanjutkan update ke tabel work_orders dengan data yang sudah di-sync
     const result = await dao.update(incident, data);
     return json({ success: true, data: result });
   }
