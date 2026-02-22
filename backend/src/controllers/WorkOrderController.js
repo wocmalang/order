@@ -50,8 +50,6 @@ export class WorkOrderController {
         row.alamat = addrMap[row.service_no];
       }
 
-      // row.status = 'OPEN';
-
       // B. Logic Workzone
       if (row.workzone) {
         if (wzMap[row.workzone]) row.sektor = wzMap[row.workzone];
@@ -72,6 +70,17 @@ export class WorkOrderController {
     const data = await req.json();
     const dao = new WorkOrderDAO(env.DB);
     
+    if (data.service_no && data.alamat) {
+      const dlDao = new DataLayananDAO(env.DB);
+      
+      // Simpan/Update ke tabel data_layanan menggunakan fungsi saveBatch yang sudah dibuat
+      await dlDao.saveBatch([{
+        service_no: data.service_no,
+        alamat: data.alamat
+      }]);
+    }
+
+    // Lanjutkan proses update work_orders seperti biasa
     const result = await dao.update(incident, data);
     return json({ success: true, data: result });
   }
@@ -80,6 +89,14 @@ export class WorkOrderController {
   async delete(req, env) {
     const { incident } = req.params;
     const dao = new WorkOrderDAO(env.DB);
+    const dlDao = new DataLayananDAO(env.DB);
+
+    const serviceNo = rawData.map(r => r.service_no).filter(Boolean);
+    const [workzones, addresses] = await Promise.all([
+      wzDao.getAll(),
+      dlDao.getAddressesByserviceNo(serviceNo)
+    ]);
+    
     await dao.delete(incident);
     return json({ success: true });
   }
