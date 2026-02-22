@@ -19,7 +19,7 @@ const ctrl = (Class, method) => (req, env, ctx) => new Class()[method](req, env,
 
 // 1. Preflight CORS Handler (TAMBAHKAN INI)
 // Ini menangani request OPTIONS dari browser agar tidak kena 404
-router.options('*', () => new Response(null, { status: 204 }));
+router.options('*', () => new Response(null, { status: 'ok',  message: 'Backend API is running.', version: '2.0.0'  }));
 
 // 2. Auth & User Management
 router.post('/login', ctrl(AuthController, 'login'));
@@ -38,6 +38,9 @@ router.get('/workzone-map', ctrl(WorkOrderController, 'getWorkzoneMap'));
 router.post('/work-orders/:incident/complete', ctrl(WorkOrderController, 'complete'));
 router.get('/reports', ctrl(ReportController, 'viewAll'));
 router.post('/reports/:incident/reopen', ctrl(ReportController, 'reopen'));
+
+// 4. Data Layanan Add
+router.post('/save-addresses', ctrl(DataLayananController, 'saveAddresses'));
 
 // 404 Handler
 router.all('*', () => json({ error: 'Not Found' }, { status: 404 }));
