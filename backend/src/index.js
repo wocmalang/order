@@ -4,13 +4,11 @@ import { ReportController } from './controllers/ReportController.js';
 import { AuthController } from './controllers/AuthController.js';
 import { DataLayananController } from './controllers/DataLayananController.js';
 
-// Middleware CORS
-const withCORS = (response) => {
-  if (!response) return response;
-  response.headers.set('Access-Control-Allow-Origin', '*');
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  return response;
+// 1. Definisikan Header CORS secara global
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*', // Mengizinkan semua domain (termasuk https://flow.wocmalang.fun)
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
 const router = Router();
@@ -18,39 +16,56 @@ const ctrl = (Class, method) => (req, env, ctx) => new Class()[method](req, env,
 
 // --- ROUTES ---
 
-// 1. Preflight CORS Handler
-router.options('*', () => new Response(null, { status: 'ok',  message: 'Backend API is running.', version: '2.0.0'  }));
+// 2. Preflight Handler: LANGSUNG kembalikan response 204 beserta header CORS
+router.options('*', () => new Response(null, { status: 204, headers: corsHeaders }));
 
-// 2. Auth & User Management
+// Auth & User Management
 router.post('/login', ctrl(AuthController, 'login'));
 router.get('/users', ctrl(AuthController, 'listUsers'));
 router.post('/users', ctrl(AuthController, 'createUser'));
 router.delete('/users/:username', ctrl(AuthController, 'deleteUser'));
 
-// 3. Work Order Core
+// Work Order Core
 router.post('/mypost', ctrl(WorkOrderController, 'create'));
 router.get('/view-d1', ctrl(WorkOrderController, 'viewAll'));
 router.put('/work-orders/:incident', ctrl(WorkOrderController, 'update'));
 router.delete('/work-orders/:incident', ctrl(WorkOrderController, 'delete'));
 router.get('/workzone-map', ctrl(WorkOrderController, 'getWorkzoneMap'));
 
-// 4. Close Ticket & Reports
+// Close Ticket & Reports
 router.post('/work-orders/:incident/complete', ctrl(WorkOrderController, 'complete'));
 router.get('/reports', ctrl(ReportController, 'viewAll'));
 router.post('/reports/:incident/reopen', ctrl(ReportController, 'reopen'));
 
-// 4. Data Layanan Add
+// Integrasi Data Layanan (Alamat)
 router.post('/save-addresses', ctrl(DataLayananController, 'saveAddresses'));
 
 // 404 Handler
-router.all('*', () => json({ error: 'Not Found' }, { status: 404 }));
+router.all('*', () => json({ error: 'Not Found' }, { status: 404, headers: corsHeaders }));
 
 export default {
   async fetch(request, env, ctx) {
-    // 1. Jalankan router
-    const response = await router.handle(request, env, ctx);
-    
-    // 2. Tempelkan header CORS ke response apapun (termasuk 204 dari OPTIONS atau 404 error)
-    return withCORS(response);
+    try {
+      // Eksekusi router
+      const response = await router.handle(request, env, ctx);
+
+      // 3. Gandakan (clone) response untuk menghindari error "immutable headers"
+      const newResponse = new Response(response.body, response);
+      for (const [key, value] of Object.entries(corsHeaders)) {
+        newResponse.headers.set(key, value);
+      }
+      return newResponse;
+
+    } catch (err) {
+      // 4. Jika aplikasi/database error (500), tangkap errornya dan TETAP berikan header CORS
+      console.error("Worker Error:", err);
+      return json({ 
+        success: false, 
+        error: err.message || 'Internal Server Error' 
+      }, { 
+        status: 500, 
+        headers: corsHeaders 
+      });
+    }
   },
 };

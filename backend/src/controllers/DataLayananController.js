@@ -3,17 +3,14 @@ import { json } from 'itty-router';
 
 export class DataLayananController {
   
-  // POST /save-addresses
   async saveAddresses(req, env) {
     try {
       const data = await req.json();
 
-      // Validasi
       if (!Array.isArray(data) || data.length === 0) {
         return json({ success: false, message: 'Data harus berupa array dan tidak boleh kosong.' }, { status: 400 });
       }
 
-      // Inisialisasi DAO dan panggil fungsi saveBatch
       const dao = new DataLayananDAO(env.DB);
       const processedCount = await dao.saveBatch(data);
 
