@@ -7,7 +7,7 @@ import { Report } from '../entities/Report.js';
 import { json } from 'itty-router';
 
 export class WorkOrderController {
-  
+
   // GET /view-d1
   async viewAll(req, env) {
     const dao = new WorkOrderDAO(env.DB);
@@ -32,12 +32,12 @@ export class WorkOrderController {
     ]);
 
     // 2. Buat Map Referensi
-    const wzMap = {}; 
+    const wzMap = {};
     const klMap = {};
-    workzones.forEach(w => { 
-      wzMap[w.workzone] = w.sektor; 
+    workzones.forEach(w => {
+      wzMap[w.workzone] = w.sektor;
       // Penting: Ambil dari properti 'korlaps' (alias dari DAO)
-      klMap[w.workzone] = w.korlaps; 
+      klMap[w.workzone] = w.korlaps;
     });
 
     const addrMap = {};
@@ -69,12 +69,12 @@ export class WorkOrderController {
     const { incident } = req.params;
     const data = await req.json();
     const dao = new WorkOrderDAO(env.DB);
-    
+
     if (data.service_no) {
       const dlDao = new DataLayananDAO(env.DB);
-      
+
       const masterAddresses = await dlDao.getAddressesByserviceNo([data.service_no]);
-      
+
       if (masterAddresses.length > 0 && masterAddresses[0].alamat) {
         data.alamat = masterAddresses[0].alamat;
       }
@@ -87,18 +87,17 @@ export class WorkOrderController {
 
   // DELETE /work-orders/:incident
   async delete(req, env) {
-    const { incident } = req.params;
-    const dao = new WorkOrderDAO(env.DB);
-    const dlDao = new DataLayananDAO(env.DB);
-
-    const serviceNo = rawData.map(r => r.service_no).filter(Boolean);
-    const [workzones, addresses] = await Promise.all([
-      wzDao.getAll(),
-      dlDao.getAddressesByserviceNo(serviceNo)
-    ]);
-    
-    await dao.delete(incident);
-    return json({ success: true });
+    try {
+      const { incident } = req.params;
+      const dao = new WorkOrderDAO(env.DB);
+      
+      // Langsung hapus saja, tidak perlu logic pencarian alamat
+      await dao.delete(incident);
+      
+      return json({ success: true });
+    } catch (err) {
+      return json({ success: false, error: err.message }, { status: 500 });
+    }
   }
 
   // GET /workzone-map

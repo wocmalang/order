@@ -57,14 +57,14 @@ const LihatWO = () => {
   const [workzoneMap, setWorkzoneMap] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedItems, setSelectedItems] = useState([]);
-  
+
   // Modal States
   const [editItem, setEditItem] = useState(null);
   const [formatItem, setFormatItem] = useState(null); // State untuk Modal Format
-  
+
   // Filter & Search
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -185,24 +185,43 @@ const LihatWO = () => {
     }
   }, [workzoneMap]);
 
-  const handleBulkAction = async (action) => {
-    if (!selectedItems.length) return;
-    const isDelete = action === "delete";
-    if (!window.confirm(`Yakin ingin ${isDelete ? "menghapus" : "menyelesaikan"} ${selectedItems.length} tiket?`)) return;
+  const handleBulkAction = async (action, targetIds = null) => {
+    // Jika ada targetIds (dari menu Aksi), gunakan itu. Jika tidak, gunakan selectedItems (Bulk).
+    const idsToProcess = targetIds || selectedItems;
 
-    if (!isDelete && woData.some(i => selectedItems.includes(i.incident) && !i.sektor)) {
+    if (!idsToProcess.length) {
+      return alert("Pilih tiket terlebih dahulu.");
+    }
+
+    const isDelete = action === "delete";
+    const confirmMsg = isDelete
+      ? `Yakin ingin menghapus ${idsToProcess.length} tiket?`
+      : `Yakin ingin menyelesaikan ${idsToProcess.length} tiket?`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    // Validasi sektor jika aksi "Selesaikan"
+    if (!isDelete && woData.some(i => idsToProcess.includes(i.incident) && !i.sektor)) {
       return alert("Gagal! Ada tiket yang belum memiliki Sektor.");
     }
 
     try {
-      await Promise.all(selectedItems.map(id => 
-        fetch(`${API_BASE_URL}/work-orders/${id}${isDelete ? "" : "/complete"}`, { method: isDelete ? "DELETE" : "POST" })
+      await Promise.all(idsToProcess.map(id =>
+        fetch(`${API_BASE_URL}/work-orders/${id}${isDelete ? "" : "/complete"}`, {
+          method: isDelete ? "DELETE" : "POST"
+        })
       ));
-      setWoData(prev => prev.filter(i => !selectedItems.includes(i.incident)));
-      setSelectedItems([]);
+
+      // Update state data lokal
+      setWoData(prev => prev.filter(i => !idsToProcess.includes(i.incident)));
+
+      // Jika tadi hapus banyak (bulk), kosongkan pilihan
+      if (!targetIds) setSelectedItems([]);
+
       alert(`Berhasil ${isDelete ? "dihapus" : "diselesaikan"}.`);
-    } catch {
-      alert("Terjadi kesalahan operasi massal.");
+    } catch (err) {
+      console.error(err);
+      alert("Terjadi kesalahan saat menghubungi server.");
     }
   };
 
@@ -218,7 +237,7 @@ const LihatWO = () => {
 
   const dataToShow = sortedData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
   const isAllSelected = dataToShow.length > 0 && dataToShow.every(i => selectedItems.includes(i.incident));
-  
+
   const toggleSelectAll = (checked) => {
     const ids = dataToShow.map(i => i.incident);
     setSelectedItems(prev => checked ? [...new Set([...prev, ...ids])] : prev.filter(id => !ids.includes(id)));
@@ -226,13 +245,13 @@ const LihatWO = () => {
 
   const filteredCols = ALL_POSSIBLE_KEYS.filter(k => k.toLowerCase().replace(/_/g, " ").includes(columnSearchTerm.toLowerCase()));
 
-  if (isLoading) return <div className="loading-container"><div className="loading-spinner"/> Memuat data...</div>;
+  if (isLoading) return <div className="loading-container"><div className="loading-spinner" /> Memuat data...</div>;
   if (error) return <div className="error-container"><h2>Error</h2><p>{error}</p></div>;
 
   return (
     <div className="lihat-wo-container">
       <div className="page-header"><h1>Incident Management</h1></div>
-      
+
       {/* Controls */}
       <div className="table-controls">
         <div className="search-and-filters">
@@ -273,8 +292,8 @@ const LihatWO = () => {
             <div className="edit-modal-body">
               <div className="column-selector-grid">
                 {filteredCols.map(key => (
-                  <div key={key} className={`column-item ${draftVisibleKeys.has(key) ? "checked" : ""}`} 
-                       onClick={() => setDraftVisibleKeys(p => { const n = new Set(p); n.has(key) ? n.delete(key) : n.add(key); return n; })}>
+                  <div key={key} className={`column-item ${draftVisibleKeys.has(key) ? "checked" : ""}`}
+                    onClick={() => setDraftVisibleKeys(p => { const n = new Set(p); n.has(key) ? n.delete(key) : n.add(key); return n; })}>
                     <input type="checkbox" checked={draftVisibleKeys.has(key)} readOnly /><label>{key.replace(/_/g, " ").toUpperCase()}</label>
                   </div>
                 ))}
@@ -297,10 +316,10 @@ const LihatWO = () => {
               <button className="btn-close-modal" onClick={() => setFormatItem(null)}>&times;</button>
             </div>
             <div className="edit-modal-body">
-              <textarea 
+              <textarea
                 id="formatTextarea"
-                className="format-textarea" 
-                defaultValue={getFormatText(formatItem)} 
+                className="format-textarea"
+                defaultValue={getFormatText(formatItem)}
               />
             </div>
             <div className="edit-modal-footer">
@@ -331,7 +350,7 @@ const LihatWO = () => {
                 <WorkOrderRow key={item.incident} item={item} isDuplicate={item.ttr_end_to_end === -2}
                   allKeys={ALL_POSSIBLE_KEYS} visibleKeys={visibleKeys} isSelected={selectedItems.includes(item.incident)}
                   onSelect={id => setSelectedItems(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id])}
-                  onUpdate={handleUpdateRow} onEdit={setEditItem} onDelete={id => handleBulkAction("delete", [id])} 
+                  onUpdate={handleUpdateRow} onEdit={setEditItem} onDelete={id => handleBulkAction("delete", [id])}
                   onViewFormat={setFormatItem} // Mengirim fungsi untuk membuka modal format
                   onComplete={id => handleBulkAction("complete", [id])}
                 />
@@ -348,7 +367,7 @@ const LihatWO = () => {
           </div>
         </div>
       </div>
-      
+
       {editItem && <EditModal item={editItem} onClose={() => setEditItem(null)} onSave={async (updated) => { await handleUpdateRow(editItem, updated); setEditItem(null); }} workzoneMap={workzoneMap} />}
     </div>
   );
