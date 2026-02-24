@@ -1,0 +1,5 @@
+-- Gunakan INSERT OR REPLACE agar jika data sudah ada, alamatnya diperbarui
+INSERT OR REPLACE INTO data_layanan (service_no, alamat) VALUES 
+('152703233086', 'Perumahan Joyogrand Inside, No. C34 DESA MERJOSARI MALANG  CP = wa.me/6282232324561'),
+('152716214020', 'Desa NGADIREJO, No. 35 KECAMATAN KROMENGAN MALANG  CP = wa.me/6285233329957'),
+('152701907968', 'MERGAN LORI  3, No. 53 KELURAHAN TANJUNGREJO MALANG  CP = wa.me/6285335574353');
