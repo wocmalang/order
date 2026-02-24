@@ -18,9 +18,13 @@ export class ReportDAO {
   stmtInsert(data) {
     const cleanData = WorkOrder.filterData(data);
     const keys = Object.keys(cleanData);
-    const values = Object.values(cleanData);
     
-    const query = `INSERT OR REPLACE INTO reports (${keys.join(', ')}) VALUES (${'?'.repeat(keys.length).split('').join(',')})`;
+    // PERBAIKAN: Ubah undefined menjadi null
+    const values = Object.values(cleanData).map(v => v === undefined ? null : v);
+    
+    const placeholders = new Array(keys.length).fill('?').join(',');
+    const query = `INSERT OR REPLACE INTO reports (${keys.join(', ')}) VALUES (${placeholders})`;
+    
     return this.db.prepare(query).bind(...values);
   }
 

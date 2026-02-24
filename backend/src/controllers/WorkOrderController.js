@@ -17,51 +17,52 @@ export class WorkOrderController {
 
   // POST /mypost
   async create(req, env) {
-    const rawData = await req.json();
-    if (!Array.isArray(rawData)) return json({ success: false, message: 'Harus array' }, { status: 400 });
+    try {
+      const rawData = await req.json();
+      if (!Array.isArray(rawData)) return json({ success: false, message: 'Harus array' }, { status: 400 });
 
-    const woDao = new WorkOrderDAO(env.DB);
-    const wzDao = new WorkzoneDAO(env.DB);
-    const dlDao = new DataLayananDAO(env.DB);
+      const woDao = new WorkOrderDAO(env.DB);
+      const wzDao = new WorkzoneDAO(env.DB);
+      const dlDao = new DataLayananDAO(env.DB);
 
-    // 1. Ambil Data Referensi
-    const serviceNo = rawData.map(r => r.service_no).filter(Boolean);
-    const [workzones, addresses] = await Promise.all([
-      wzDao.getAll(),
-      dlDao.getAddressesByserviceNo(serviceNo)
-    ]);
+      // 1. Ambil Data Referensi
+      const serviceNo = rawData.map(r => r.service_no).filter(Boolean);
+      const [workzones, addresses] = await Promise.all([
+        wzDao.getAll(),
+        dlDao.getAddressesByserviceNo(serviceNo)
+      ]);
 
-    // 2. Buat Map Referensi
-    const wzMap = {};
-    const klMap = {};
-    workzones.forEach(w => {
-      wzMap[w.workzone] = w.sektor;
-      // Penting: Ambil dari properti 'korlaps' (alias dari DAO)
-      klMap[w.workzone] = w.korlaps;
-    });
+      // 2. Buat Map Referensi
+      const wzMap = {};
+      const klMap = {};
+      workzones.forEach(w => {
+        wzMap[w.workzone] = w.sektor;
+        klMap[w.workzone] = w.korlaps || w.korlap_username || null;
+      });
 
-    const addrMap = {};
-    addresses.forEach(a => { addrMap[a.service_no] = a.alamat; });
+      const addrMap = {};
+      addresses.forEach(a => { addrMap[a.service_no] = a.alamat; });
 
-    // 3. Proses Data (Sync Logic)
-    const processedData = rawData.map(row => {
-      // A. Logic Alamat: Master Data SELALU MENIMPA input manual (Sync Priority)
-      if (row.service_no && addrMap[row.service_no]) {
-        row.alamat = addrMap[row.service_no];
-      }
+      // 3. Proses Data
+      const processedData = rawData.map(row => {
+        const item = { ...row };
+        if (item.service_no && addrMap[item.service_no]) item.alamat = addrMap[item.service_no];
+        if (item.workzone) {
+          if (wzMap[item.workzone]) item.sektor = wzMap[item.workzone];
+          if (klMap[item.workzone]) item.korlap = klMap[item.workzone];
+        }
+        return new WorkOrder(item);
+      });
 
-      // B. Logic Workzone
-      if (row.workzone) {
-        if (wzMap[row.workzone]) row.sektor = wzMap[row.workzone];
-        if (klMap[row.workzone]) row.korlap = klMap[row.workzone];
-      }
+      // 4. Simpan ke DB
+      await woDao.insert(processedData);
+      return json({ success: true }, { status: 201 });
 
-      return new WorkOrder(row);
-    });
-
-    // 4. Simpan ke DB
-    await woDao.insert(processedData);
-    return json({ success: true }, { status: 201 });
+    } catch (err) {
+      // LIHAT TERMINAL ANDA (tempat menjalankan 'npm start' atau 'wrangler dev')
+      console.error("CRITICAL_DATABASE_ERROR:", err.message);
+      return json({ success: false, message: err.message }, { status: 500 });
+    }
   }
 
   // PUT /work-orders/:incident
@@ -90,10 +91,10 @@ export class WorkOrderController {
     try {
       const { incident } = req.params;
       const dao = new WorkOrderDAO(env.DB);
-      
+
       // Langsung hapus saja, tidak perlu logic pencarian alamat
       await dao.delete(incident);
-      
+
       return json({ success: true });
     } catch (err) {
       return json({ success: false, error: err.message }, { status: 500 });
