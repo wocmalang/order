@@ -2,7 +2,7 @@ const ReportTable = ({ reports, sortConfig, requestSort, handleReopen, actionLoa
 
   const getTableHeaders = () => {
     if (allReports.length === 0) return [];
-    const preferredOrder = ["incident", "summary", "reported_date", "owner_group", "witel", "sektor", "workzone", "status"];
+    const preferredOrder = ["incident", "summary", "reported_date", "korlap", "witel", "sektor", "workzone", "status"];
     const headers = Object.keys(allReports[0]);
     return preferredOrder.filter((h) => headers.includes(h));
   };

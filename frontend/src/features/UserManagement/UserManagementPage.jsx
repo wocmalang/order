@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./UserManagementPage.css";
 
-const USER_MANAGE_URL = "https://order-be.gunawanferdian007.workers.dev/users";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const USER_MANAGE_URL = `${API_BASE_URL}/users`;
 
 function UserManagementPage() {
   const [users, setUsers] = useState([]);

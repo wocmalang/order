@@ -13,7 +13,6 @@ export class AuthController {
         return json({ success: false, message: 'Username atau Password salah.' }, { status: 401 });
       }
 
-      // Hapus password dari object user sebelum dikirim ke frontend
       const { password: _, ...userData } = user;
       return json({ success: true, user: userData });
     } catch (err) {
@@ -24,7 +23,6 @@ export class AuthController {
   async listUsers(req, env) {
     const dao = new UserDAO(env.DB);
     const users = await dao.getAll();
-    // Kembalikan sebagai { success: true, users: [...] }
     return json({ success: true, users: users }); 
   }
 
@@ -39,7 +37,6 @@ export class AuthController {
       }
 
       await dao.create(username, password, role);
-      // Status 200 agar sesuai test case
       return json({ success: true, message: 'User dibuat.' }, { status: 200 });
     } catch (err) {
       return json({ success: false, error: err.message }, { status: 500 });

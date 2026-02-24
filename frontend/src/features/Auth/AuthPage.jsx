@@ -12,8 +12,9 @@ function setUser(user) {
     localStorage.setItem("user", user);
   }
 }
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
-const API_URL = "https://order-be.gunawanferdian007.workers.dev/login";
+const API_URL = `${API_BASE_URL}/login`;
 
 function AuthPage() {
   const [username, setUsername] = useState("");

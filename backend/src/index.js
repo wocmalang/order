@@ -6,7 +6,7 @@ import { DataLayananController } from './controllers/DataLayananController.js';
 
 // 1. Definisikan Header CORS secara global
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*', // Mengizinkan semua domain (termasuk https://flow.wocmalang.fun)
+  'Access-Control-Allow-Origin': '*', 
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
@@ -57,7 +57,6 @@ export default {
       return newResponse;
 
     } catch (err) {
-      // 4. Jika aplikasi/database error (500), tangkap errornya dan TETAP berikan header CORS
       console.error("Worker Error:", err);
       return json({ 
         success: false, 

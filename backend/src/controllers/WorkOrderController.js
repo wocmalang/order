@@ -3,7 +3,7 @@ import { WorkzoneDAO } from '../dao/WorkzoneDAO.js';
 import { DataLayananDAO } from '../dao/DataLayananDAO.js';
 import { ReportDAO } from '../dao/ReportDAO.js';
 import { WorkOrder } from '../entities/WorkOrder.js';
-import { Report } from '../entities/Report.js'; // Pastikan import entity Report
+import { Report } from '../entities/Report.js';
 import { json } from 'itty-router';
 
 export class WorkOrderController {

@@ -16,7 +16,6 @@ export class ReportDAO {
   // --- HELPER UNTUK BATCH TRANSACTION ---
 
   stmtInsert(data) {
-    // Kita gunakan filterData dari WorkOrder karena strukturnya sama
     const cleanData = WorkOrder.filterData(data);
     const keys = Object.keys(cleanData);
     const values = Object.values(cleanData);
