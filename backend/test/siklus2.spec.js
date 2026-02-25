@@ -32,7 +32,8 @@ describe('Siklus 2: Auth, User Management & Ticket Lifecycle', () => {
     await env.DB.batch([
       env.DB.prepare(`
         CREATE TABLE IF NOT EXISTS users (
-          username TEXT PRIMARY KEY,
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT UNIQUE,
           password TEXT,
           role TEXT
         )
@@ -122,14 +123,13 @@ describe('Siklus 2: Auth, User Management & Ticket Lifecycle', () => {
 
     expect(res.status).toBe(200);
     expect(body.success).toBe(true);
-    expect(body.users.length).toBeGreaterThan(0); // Minimal ada admin
+    expect(body.users.length).toBeGreaterThan(0); 
   });
 
-  // 3. FITUR COMPLETE TICKET (WO -> REPORT)
   it('POST /work-orders/:incident/complete - Menyelesaikan Tiket', async () => {
-    await env.DB.prepare("INSERT INTO work_orders (incident, status, summary) VALUES ('INC-CLOSE', 'OPEN', 'Segera Selesai')").run();
+    await env.DB.prepare("INSERT INTO work_orders (incident, status, summary) VALUES ('INC39399564', 'OPEN', 'Segera Selesai')").run();
 
-    const req = createRequest('POST', '/work-orders/INC-CLOSE/complete');
+    const req = createRequest('POST', '/work-orders/INC39399564/complete');
     const res = await worker.fetch(req, env);
     const body = await res.json();
 
@@ -137,11 +137,11 @@ describe('Siklus 2: Auth, User Management & Ticket Lifecycle', () => {
     expect(body.success).toBe(true);
 
     // 1. Cek Work Orders: Harus HILANG
-    const checkWo = await env.DB.prepare("SELECT * FROM work_orders WHERE incident = 'INC-CLOSE'").first();
+    const checkWo = await env.DB.prepare("SELECT * FROM work_orders WHERE incident = 'INC39399564'").first();
     expect(checkWo).toBeNull();
 
     // 2. Cek Reports: Harus ADA & Status CLOSED
-    const checkRep = await env.DB.prepare("SELECT * FROM reports WHERE incident = 'INC-CLOSE'").first();
+    const checkRep = await env.DB.prepare("SELECT * FROM reports WHERE incident = 'INC39399564'").first();
     expect(checkRep).toBeDefined();
     expect(checkRep.status).toBe('CLOSED');
     expect(checkRep.resolve_date).not.toBeNull();
