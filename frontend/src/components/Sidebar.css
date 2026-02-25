@@ -98,3 +98,27 @@
 .nav-link span {
   flex-grow: 1;
 }
+
+.sidebar-footer {
+  margin-top: auto; /* Mendorong footer ke bagian paling bawah */
+  padding-bottom: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.logout-btn {
+  width: calc(100% - 2rem); /* Sesuaikan lebar dengan margin */
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--telkom-red); /* Menggunakan warna merah telkom jika ada, atau merah standar */
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+}
+
+/* Hover effect khusus untuk tombol logout */
+.logout-btn:hover {
+  background-color: #fee; /* Latar belakang merah muda tipis */
+  color: #d32f2f; /* Merah yang lebih gelap */
+}

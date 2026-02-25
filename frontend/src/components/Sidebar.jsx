@@ -1,10 +1,22 @@
 // src/components/Sidebar.jsx
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import "./Sidebar.css";
 
 const Sidebar = ({ isOpen, closeSidebar }) => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    // 1. Hapus data user dari storage
+    sessionStorage.removeItem("user");
+    localStorage.removeItem("user");
+
+    // 2. Redirect ke halaman login
+    navigate("/login", { replace: true });
+  };
+
   return (
     <aside className={`sidebar ${isOpen ? "show" : ""}`}>
+      {/* Tombol Close Mobile */}
       <button className="sidebar-close-btn" onClick={closeSidebar}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -25,6 +37,7 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
       <div className="sidebar-header">
         <h2>Dashboard</h2>
       </div>
+
       <nav className="sidebar-nav">
         <NavLink
           to="/"
@@ -52,6 +65,13 @@ const Sidebar = ({ isOpen, closeSidebar }) => {
           <span>Laporan</span>
         </NavLink>
       </nav>
+
+      {/* Tambahan: Bagian Footer Sidebar untuk Logout */}
+      <div className="sidebar-footer">
+        <button onClick={handleLogout} className="nav-link logout-btn">
+          <span>Logout</span>
+        </button>
+      </div>
     </aside>
   );
 };
