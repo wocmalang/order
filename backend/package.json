@@ -13,6 +13,7 @@
 		"wrangler": "^4.33.0"
 	},
 	"dependencies": {
+		"better-sqlite3": "^12.6.2",
 		"itty-router": "^4.0.23"
 	}
 }

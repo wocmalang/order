@@ -5,7 +5,6 @@ import { ReportDAO } from '../dao/ReportDAO.js';
 import { WorkOrder } from '../entities/WorkOrder.js';
 import { Report } from '../entities/Report.js';
 import { json } from 'itty-router';
-
 export class WorkOrderController {
 
   // GET /view-d1
